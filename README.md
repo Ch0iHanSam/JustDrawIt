@@ -38,9 +38,10 @@
 ## 세부 사항
 
 ## 주차별 커밋
+https://github.com/Ch0iHanSam/JustDrawIt/graphs/commit-activity
 |주차|커밋 횟수|
 |----|----|
-|1주차|0|
+|1주차|5|
 |2주차|0|
 |3주차|0|
 |4주차|0|
