@@ -112,14 +112,33 @@ class Player(gctx: GameContext) : IGameObject {
 
     fun handleKeyDown(keyCode: Int): Boolean {
         when (keyCode) {
-            KeyEvent.KEYCODE_DPAD_LEFT -> leftPressed = true
-            KeyEvent.KEYCODE_DPAD_RIGHT -> rightPressed = true
-            KeyEvent.KEYCODE_DPAD_UP -> upPressed = true
-            KeyEvent.KEYCODE_DPAD_DOWN -> downPressed = true
-            KeyEvent.KEYCODE_A -> isColorChanging = true
-            KeyEvent.KEYCODE_B -> {
-                isColorChanging = false
-                drawable.colorFilter = PorterDuffColorFilter(Color.parseColor("#FFC0CB"), PorterDuff.Mode.SRC_IN)
+            KeyEvent.KEYCODE_DPAD_LEFT -> {
+                leftPressed = true
+                rightPressed = false
+            }
+            KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                rightPressed = true
+                leftPressed = false
+            }
+            KeyEvent.KEYCODE_DPAD_UP -> {
+                upPressed = true
+                downPressed = false
+            }
+            KeyEvent.KEYCODE_DPAD_DOWN -> {
+                downPressed = true
+                upPressed = false
+            }
+            KeyEvent.KEYCODE_C -> {
+                isColorChanging = !isColorChanging
+                if (!isColorChanging) {
+                    drawable.colorFilter = PorterDuffColorFilter(Color.parseColor("#FFC0CB"), PorterDuff.Mode.SRC_IN)
+                }
+            }
+            KeyEvent.KEYCODE_X -> {
+                leftPressed = false
+                rightPressed = false
+                upPressed = false
+                downPressed = false
             }
             else -> return false
         }
@@ -127,13 +146,12 @@ class Player(gctx: GameContext) : IGameObject {
     }
 
     fun handleKeyUp(keyCode: Int): Boolean {
-        when (keyCode) {
-            KeyEvent.KEYCODE_DPAD_LEFT -> leftPressed = false
-            KeyEvent.KEYCODE_DPAD_RIGHT -> rightPressed = false
-            KeyEvent.KEYCODE_DPAD_UP -> upPressed = false
-            KeyEvent.KEYCODE_DPAD_DOWN -> downPressed = false
-            else -> return false
+        return when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_LEFT,
+            KeyEvent.KEYCODE_DPAD_RIGHT,
+            KeyEvent.KEYCODE_DPAD_UP,
+            KeyEvent.KEYCODE_DPAD_DOWN -> true
+            else -> false
         }
-        return true
     }
 }
