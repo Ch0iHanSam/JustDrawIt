@@ -30,8 +30,8 @@ class Enemy(
         height = 200f
         syncDstRect()
 
-        // 캐릭터 속도(화면 너비 / 5초)의 70%
-        speed = (gctx.metrics.width / 5.0f) * 0.7f
+        // 속도 설정
+        speed = Speed.getEnemySpeed(gctx)
     }
 
     override fun update(gctx: GameContext) {

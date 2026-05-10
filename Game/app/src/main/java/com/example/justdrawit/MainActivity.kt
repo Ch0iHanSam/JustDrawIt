@@ -3,6 +3,7 @@ package com.example.justdrawit
 import android.graphics.Canvas
 import android.graphics.Color
 import android.view.KeyEvent
+import android.view.MotionEvent
 import kr.ac.tukorea.ge.spgp2026.a2dg.activity.BaseGameActivity
 import kr.ac.tukorea.ge.spgp2026.a2dg.scene.Scene
 import kr.ac.tukorea.ge.spgp2026.a2dg.scene.World
@@ -33,14 +34,14 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
     enum class Layer { BACKGROUND, PLAYER, HUD }
     override val world = World(Layer.entries.toTypedArray())
     private val player = Player(gctx)
-    private val hud = DirectionHud(gctx, player)
+    private val test = Test(gctx, player)
     private val background = Background(gctx, player)
     private val minimap = Minimap(gctx, player)
 
     init {
         world.add(background, Layer.BACKGROUND)
         world.add(player, Layer.PLAYER)
-        world.add(hud, Layer.HUD)
+        world.add(test, Layer.HUD)
         world.add(minimap, Layer.HUD)
 
         // 캐릭터 주위에 랜덤하게 5마리의 적 생성
@@ -72,4 +73,55 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
 
     fun onKeyDown(keyCode: Int): Boolean = player.handleKeyDown(keyCode)
     fun onKeyUp(keyCode: Int): Boolean = player.handleKeyUp(keyCode)
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (event.action == MotionEvent.ACTION_DOWN) {
+            val tx = event.x
+            val ty = event.y
+
+            // 테스트용 클릭 효과 추가
+            test.addClickEffect(tx, ty)
+
+            val screenWidth = gctx.metrics.width
+            val screenHeight = gctx.metrics.height
+            val mapSize = 200f * 20f
+
+            // 캐릭터가 화면에 그려지는 실제 위치(Screen Position)를 역산
+            val halfWinW = screenWidth / 2f
+            val halfWinH = screenHeight / 2f
+
+            val camMinX = halfWinW
+            val camMaxX = mapSize - halfWinW
+            val camMinY = halfWinH
+            val camMaxY = mapSize - halfWinH
+
+            val playerScreenX = when {
+                mapSize <= screenWidth -> player.x
+                player.x < camMinX -> player.x
+                player.x > camMaxX -> player.x - (mapSize - screenWidth)
+                else -> halfWinW
+            }
+
+            val playerScreenY = when {
+                mapSize <= screenHeight -> player.y
+                player.y < camMinY -> player.y
+                player.y > camMaxY -> player.y - (mapSize - screenHeight)
+                else -> halfWinH
+            }
+
+            // 클릭 지점(tx, ty)에서 캐릭터의 화면 위치(playerScreenX, playerScreenY)를 뺀 벡터가 발사 방향
+            val diffX = tx - playerScreenX
+            val diffY = ty - playerScreenY
+
+            // 이 벡터를 현재 캐릭터의 월드 좌표에 더하면 월드 기준 목표 지점이 됨
+            val targetWorldX = player.x + diffX
+            val targetWorldY = player.y + diffY
+
+            // 캐릭터의 현재 위치에서 마법 발사
+            val spell = Spell(gctx, player.x, player.y, targetWorldX, targetWorldY, player, world)
+            world.add(spell, Layer.PLAYER)
+            return true
+        }
+        return super.onTouchEvent(event)
+    }
 }

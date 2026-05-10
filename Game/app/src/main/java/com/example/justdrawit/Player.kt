@@ -37,8 +37,8 @@ class Player(private val gctx: GameContext) : Sprite(gctx, R.drawable.densis_ill
         height = 200f
         syncDstRect()
 
-        // 화면 가로를 5초에 횡단하는 속도 계산 (화면 너비 / 5초)
-        speed = gctx.metrics.width / 5.0f
+        // 속도 설정
+        speed = Speed.getPlayerSpeed(gctx)
     }
 
     override fun update(gctx: GameContext) {

@@ -6,10 +6,13 @@ import android.graphics.Paint
 import kr.ac.tukorea.ge.spgp2026.a2dg.objects.IGameObject
 import kr.ac.tukorea.ge.spgp2026.a2dg.view.GameContext
 
-class DirectionHud(private val gctx: GameContext, private val player: Player) : IGameObject {
+class Test(private val gctx: GameContext, private val player: Player) : IGameObject {
+    // 기능 활성화 여부
+    var isEnabled = true
+    
+    // DirectionHud 관련 변수
     private val boxSize = 80f
     private val gap = 15f
-    
     private val redPaint = Paint().apply { 
         color = Color.parseColor("#FF6B6B")
         style = Paint.Style.FILL 
@@ -19,15 +22,50 @@ class DirectionHud(private val gctx: GameContext, private val player: Player) : 
         style = Paint.Style.FILL 
     }
 
+    // 클릭 효과 관련 클래스
+    private class ClickEffect(val x: Float, val y: Float) {
+        var lifeTime = 3.0f
+    }
+    private val clickEffects = mutableListOf<ClickEffect>()
+    private val yellowPaint = Paint().apply {
+        color = Color.YELLOW
+        alpha = 128 // 반투명 (0~255)
+        style = Paint.Style.FILL
+    }
+
+    fun addClickEffect(x: Float, y: Float) {
+        if (!isEnabled) return
+        clickEffects.add(ClickEffect(x, y))
+    }
+
     override fun update(gctx: GameContext) {
+        if (!isEnabled) return
+        
+        // 클릭 효과 시간 업데이트 및 만료된 항목 제거
+        val it = clickEffects.iterator()
+        while (it.hasNext()) {
+            val effect = it.next()
+            effect.lifeTime -= gctx.frameTime
+            if (effect.lifeTime <= 0) {
+                it.remove()
+            }
+        }
     }
 
     override fun draw(canvas: Canvas) {
-        val screenWidth = gctx.metrics.width
+        if (!isEnabled) return
+
+        // 1. 클릭 효과 그리기 (노란색 반투명 원)
+        for (effect in clickEffects) {
+            canvas.drawCircle(effect.x, effect.y, 50f, yellowPaint)
+        }
+
+        // 2. DirectionHud 내용 그리기
+        drawDirectionHud(canvas)
+    }
+
+    private fun drawDirectionHud(canvas: Canvas) {
         val screenHeight = gctx.metrics.height
-        
-        // 왼쪽 하단 배치를 위한 기준점 계산
-        // 십자 모양의 전체 폭을 고려하여 여백(padding)을 80f로 설정
         val padding = 80f
         val centerX = padding + boxSize + gap + (boxSize / 2f)
         val centerY = screenHeight - padding - boxSize - gap - (boxSize / 2f)
