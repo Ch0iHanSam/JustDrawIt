@@ -24,3 +24,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "JustDrawIt"
 include(":app")
+include(":a2dg1")
+project(":a2dg1").projectDir = File(rootDir, "a2dg/")
