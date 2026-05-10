@@ -34,12 +34,32 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
     override val world = World(Layer.entries.toTypedArray())
     private val player = Player(gctx)
     private val hud = DirectionHud(gctx, player)
-    private val background = Background(gctx)
+    private val background = Background(gctx, player)
+    private val minimap = Minimap(gctx, player)
 
     init {
         world.add(background, Layer.BACKGROUND)
         world.add(player, Layer.PLAYER)
         world.add(hud, Layer.HUD)
+        world.add(minimap, Layer.HUD)
+
+        // 캐릭터 주위에 랜덤하게 5마리의 적 생성
+        val random = java.util.Random()
+        val minDistance = 800f  // 최소 거리
+        val maxDistance = 1500f // 최대 거리
+        
+        for (i in 1..5) {
+            // 랜덤한 각도(0~360도) 선택
+            val angle = random.nextDouble() * 2.0 * Math.PI
+            // 최소~최대 사이의 랜덤한 거리 선택
+            val distance = minDistance + random.nextFloat() * (maxDistance - minDistance)
+            
+            val enemyX = player.x + (Math.cos(angle) * distance).toFloat()
+            val enemyY = player.y + (Math.sin(angle) * distance).toFloat()
+            
+            val enemy = Enemy(gctx, enemyX, enemyY, player)
+            world.add(enemy, Layer.PLAYER)
+        }
     }
 
     override fun draw(canvas: Canvas) {
