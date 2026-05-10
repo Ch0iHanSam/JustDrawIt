@@ -2,20 +2,14 @@ package com.example.justdrawit
 
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
-import android.graphics.drawable.Drawable
 import android.view.KeyEvent
-import kr.ac.tukorea.ge.spgp2026.a2dg.objects.IGameObject
+import kr.ac.tukorea.ge.spgp2026.a2dg.objects.Sprite
 import kr.ac.tukorea.ge.spgp2026.a2dg.view.GameContext
 
-class Player(gctx: GameContext) : IGameObject {
-    private val drawable: Drawable = gctx.res.getDrawable(R.drawable.ic_launcher_foreground).apply {
-        colorFilter = PorterDuffColorFilter(Color.parseColor("#FFC0CB"), PorterDuff.Mode.SRC_IN)
-    }
-    private var x = gctx.metrics.width / 2
-    private var y = gctx.metrics.height / 2
-    private val size = 300f
+class Player(gctx: GameContext) : Sprite(gctx, R.drawable.densis_illustration) {
     private var speed = 0f
 
     private var leftPressed = false
@@ -25,6 +19,7 @@ class Player(gctx: GameContext) : IGameObject {
 
     private var isColorChanging = false
     private var frameCount = 0
+    private val paint = Paint() // 기본적으로 필터 없음
 
     fun isLeftPressed() = leftPressed
     fun isRightPressed() = rightPressed
@@ -32,6 +27,15 @@ class Player(gctx: GameContext) : IGameObject {
     fun isDownPressed() = downPressed
 
     init {
+        // 위치 초기화
+        x = gctx.metrics.width / 2
+        y = gctx.metrics.height / 2
+        
+        // 크기 설정 (가상 좌표계 기준 180x200)
+        width = 180f
+        height = 200f
+        syncDstRect()
+
         // 화면 가로를 5초에 횡단하는 속도 계산 (화면 너비 / 5초)
         speed = gctx.metrics.width / 5.0f
     }
@@ -51,6 +55,9 @@ class Player(gctx: GameContext) : IGameObject {
 
         x = x.coerceIn(0f, gctx.metrics.width)
         y = y.coerceIn(0f, gctx.metrics.height)
+        
+        // 위치가 변했으므로 그리기 영역 업데이트
+        syncDstRect()
 
         if (isColorChanging) {
             frameCount++
@@ -58,19 +65,14 @@ class Player(gctx: GameContext) : IGameObject {
                 val r = (0..255).random()
                 val g = (0..255).random()
                 val b = (0..255).random()
-                drawable.colorFilter = PorterDuffColorFilter(Color.rgb(r, g, b), PorterDuff.Mode.SRC_IN)
+                paint.colorFilter = PorterDuffColorFilter(Color.rgb(r, g, b), PorterDuff.Mode.SRC_IN)
                 frameCount = 0
             }
         }
     }
 
     override fun draw(canvas: Canvas) {
-        val left = (x - size / 2).toInt()
-        val top = (y - size / 2).toInt()
-        val right = (x + size / 2).toInt()
-        val bottom = (y + size / 2).toInt()
-        drawable.setBounds(left, top, right, bottom)
-        drawable.draw(canvas)
+        canvas.drawBitmap(bitmap, srcRect, dstRect, paint)
     }
 
     fun handleKeyDown(keyCode: Int): Boolean {
@@ -94,7 +96,7 @@ class Player(gctx: GameContext) : IGameObject {
             KeyEvent.KEYCODE_C -> {
                 isColorChanging = !isColorChanging
                 if (!isColorChanging) {
-                    drawable.colorFilter = PorterDuffColorFilter(Color.parseColor("#FFC0CB"), PorterDuff.Mode.SRC_IN)
+                    paint.colorFilter = null // 원래 이미지 색상으로 복구
                 }
             }
             KeyEvent.KEYCODE_X -> {

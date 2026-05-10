@@ -30,12 +30,14 @@ class MainActivity : BaseGameActivity() {
 }
 
 class MainScene(gctx: GameContext) : Scene(gctx) {
-    enum class Layer { PLAYER, HUD }
+    enum class Layer { BACKGROUND, PLAYER, HUD }
     override val world = World(Layer.entries.toTypedArray())
     private val player = Player(gctx)
     private val hud = DirectionHud(gctx, player)
+    private val background = Background(gctx)
 
     init {
+        world.add(background, Layer.BACKGROUND)
         world.add(player, Layer.PLAYER)
         world.add(hud, Layer.HUD)
     }

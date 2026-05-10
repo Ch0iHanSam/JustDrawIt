@@ -1,0 +1,44 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="128dp"
+    android:height="128dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+
+    <!-- 배경: 기본 흙바닥 -->
+    <path
+        android:fillColor="#D2B48C"
+        android:pathData="M0,0h128v128h-128z" />
+
+    <!-- 짙은 흙 질감 1 -->
+    <path
+        android:fillColor="#BC8F8F"
+        android:pathData="M10,20h8v4h-8zM70,10h12v2h-12zM100,50h6v6h-6zM30,90h10v3h-10z" />
+
+    <!-- 짙은 흙 질감 2 (더 깊은 색) -->
+    <path
+        android:fillColor="#A0522D"
+        android:pathData="M45,35h4v4h-4zM90,85h3v3h-3zM10,110h5v2h-5zM115,15h3v3h-3z" />
+
+    <!-- 돌 1 -->
+    <path
+        android:fillColor="#A9A9A9"
+        android:pathData="M15,85a8,6 0,1 0,16 0a8,6 0,1 0,-16 0" />
+    <!-- 돌 2 -->
+    <path
+        android:fillColor="#959595"
+        android:pathData="M95,40a5,4 0,1 0,10 0a5,4 0,1 0,-10 0" />
+
+    <!-- 풀 더미 1 -->
+    <path
+        android:fillColor="#88B04B"
+        android:pathData="M50,25c-2,-5 -5,-2 -5,0c0,5 5,10 5,10s5,-5 5,-10c0,-2 -3,-5 -5,0" />
+    <path
+        android:fillColor="#7BA042"
+        android:pathData="M55,30c-2,-4 -4,-2 -4,0c0,4 4,8 4,8s4,-4 4,-8c0,-2 -2,-4 -4,0" />
+
+    <!-- 풀 더미 2 -->
+    <path
+        android:fillColor="#88B04B"
+        android:pathData="M100,105c-2,-5 -5,-2 -5,0c0,5 5,10 5,10s5,-5 5,-10c0,-2 -3,-5 -5,0" />
+
+</vector>
