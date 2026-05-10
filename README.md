@@ -15,7 +15,7 @@
 - 제스처 라이브러리 구현
 
 ## 예상 게임 실행 흐름
-<img src = imgs/readme1.png> ==> <img src = imgs/readme3.png>
+<img src = imgs/readme1.png width = 216 height = 320> ==> <img src = imgs/readme3.png width = 216 height = 320>
 
 ## 개발 일정(8주)
 - 1주차(4/6~4/12) : 캐릭터 이동 구현(방향키 기반)
