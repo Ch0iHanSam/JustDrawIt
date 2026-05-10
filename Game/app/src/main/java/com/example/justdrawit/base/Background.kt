@@ -1,7 +1,8 @@
-package com.example.justdrawit
+package com.example.justdrawit.base
 
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
+import com.example.justdrawit.R
 import kr.ac.tukorea.ge.spgp2026.a2dg.objects.IGameObject
 import kr.ac.tukorea.ge.spgp2026.a2dg.view.GameContext
 

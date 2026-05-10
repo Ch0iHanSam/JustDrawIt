@@ -1,10 +1,14 @@
-package com.example.justdrawit
+package com.example.justdrawit.enemy
 
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
+import android.graphics.RectF
+import com.example.justdrawit.R
+import com.example.justdrawit.base.Player
+import com.example.justdrawit.base.Speed
 import kr.ac.tukorea.ge.spgp2026.a2dg.objects.Sprite
 import kr.ac.tukorea.ge.spgp2026.a2dg.view.GameContext
 
@@ -81,5 +85,55 @@ class Enemy(
             drawX + halfW, drawY + halfH
         )
         canvas.drawBitmap(bitmap, srcRect, drawRect, paint)
+    }
+
+    fun getScreenRect(): RectF {
+        val screenWidth = gctx.metrics.width
+        val screenHeight = gctx.metrics.height
+        val mapSize = 200f * 20f
+
+        var offsetX = player.x - screenWidth / 2
+        var offsetY = player.y - screenHeight / 2
+        offsetX = offsetX.coerceIn(0f, (mapSize - screenWidth).coerceAtLeast(0f))
+        offsetY = offsetY.coerceIn(0f, (mapSize - screenHeight).coerceAtLeast(0f))
+
+        val drawX = x - offsetX
+        val drawY = y - offsetY
+
+        val halfW = width / 2f
+        val halfH = height / 2f
+        
+        return RectF(
+            drawX - halfW, drawY - halfH,
+            drawX + halfW, drawY + halfH
+        )
+    }
+
+    fun getBoundingRect(): RectF {
+        val halfW = width / 2f
+        val halfH = height / 2f
+        return RectF(x - halfW, y - halfH, x + halfW, y + halfH)
+    }
+
+    companion object {
+        fun randomSpawn(gctx: GameContext, player: Player): Enemy {
+            val random = java.util.Random()
+            // 최소 거리: 화면 세로 길이를 지름으로 하는 원의 반지름 (즉, 세로 길이의 절반)
+            val minDistance = gctx.metrics.height / 2f
+            val maxDistance = minDistance + 500f // 최대 거리는 최소 거리 + 500f 정도로 설정
+            
+            // 랜덤한 각도(0~360도) 선택
+            val spawnAngle = random.nextDouble() * 2.0 * Math.PI
+            // 최소~최대 사이의 랜덤한 거리 선택
+            val distance = minDistance + random.nextFloat() * (maxDistance - minDistance)
+            
+            val enemyX = player.x + (Math.cos(spawnAngle) * distance).toFloat()
+            val enemyY = player.y + (Math.sin(spawnAngle) * distance).toFloat()
+            
+            // 8개 가상 지점(0~7) 중 하나를 랜덤하게 목표로 설정
+            val targetIndex = random.nextInt(8)
+            
+            return Enemy(gctx, enemyX, enemyY, player, targetIndex)
+        }
     }
 }

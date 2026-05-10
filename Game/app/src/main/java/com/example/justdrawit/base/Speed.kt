@@ -1,4 +1,4 @@
-package com.example.justdrawit
+package com.example.justdrawit.base
 
 import kr.ac.tukorea.ge.spgp2026.a2dg.view.GameContext
 

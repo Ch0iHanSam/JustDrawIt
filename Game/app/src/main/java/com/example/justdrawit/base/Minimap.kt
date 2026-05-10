@@ -1,8 +1,10 @@
-package com.example.justdrawit
+package com.example.justdrawit.base
 
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import com.example.justdrawit.MainScene
+import com.example.justdrawit.enemy.Enemy
 import kr.ac.tukorea.ge.spgp2026.a2dg.objects.IGameObject
 import kr.ac.tukorea.ge.spgp2026.a2dg.view.GameContext
 
@@ -23,6 +25,10 @@ class Minimap(private val gctx: GameContext, private val player: Player) : IGame
     }
     private val playerPaint = Paint().apply {
         color = Color.RED
+        style = Paint.Style.FILL
+    }
+    private val enemyPaint = Paint().apply {
+        color = Color.BLUE
         style = Paint.Style.FILL
     }
 
@@ -56,5 +62,16 @@ class Minimap(private val gctx: GameContext, private val player: Player) : IGame
 
         // 캐릭터 표시 (빨간 점, 미니맵 내에서 실제 위치에 따라 움직임)
         canvas.drawCircle(dotX, dotY, 8f, playerPaint)
+
+        // 적 표시 (파란 점)
+        val scene = gctx.scene as? MainScene ?: return
+        val enemies = scene.world.objectsAt(MainScene.Layer.PLAYER).filterIsInstance<Enemy>()
+        for (enemy in enemies) {
+            val relEnemyX = enemy.x / totalMapSize
+            val relEnemyY = enemy.y / totalMapSize
+            val enemyDotX = left + (relEnemyX * size)
+            val enemyDotY = top + (relEnemyY * size)
+            canvas.drawCircle(enemyDotX, enemyDotY, 5f, enemyPaint)
+        }
     }
 }

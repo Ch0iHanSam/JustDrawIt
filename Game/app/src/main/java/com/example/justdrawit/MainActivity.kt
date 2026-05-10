@@ -4,6 +4,12 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.view.KeyEvent
 import android.view.MotionEvent
+import com.example.justdrawit.base.Background
+import com.example.justdrawit.base.Minimap
+import com.example.justdrawit.base.Player
+import com.example.justdrawit.enemy.Enemy
+import com.example.justdrawit.spell.MagicArrow
+import com.example.justdrawit.spell.MagicSprinkle
 import kr.ac.tukorea.ge.spgp2026.a2dg.activity.BaseGameActivity
 import kr.ac.tukorea.ge.spgp2026.a2dg.scene.Scene
 import kr.ac.tukorea.ge.spgp2026.a2dg.scene.World
@@ -38,30 +44,25 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
     private val background = Background(gctx, player)
     private val minimap = Minimap(gctx, player)
 
+    private var sprinkleTimer = 0f
+    private var sprinkleCount = 30 // 초기에는 발사하지 않음
+    private var sprinkleBaseAngle = 0.0
+
+    // 터치 시간 측정용 변수
+    private var touchDownTime = 0L
+    private var isTouchHolding = false
+    private var lastTouchX = 0f
+    private var lastTouchY = 0f
+
     init {
         world.add(background, Layer.BACKGROUND)
         world.add(player, Layer.PLAYER)
         world.add(test, Layer.HUD)
         world.add(minimap, Layer.HUD)
 
-        // 캐릭터 주위에 랜덤하게 5마리의 적 생성
-        val random = java.util.Random()
-        val minDistance = 800f  // 최소 거리
-        val maxDistance = 1500f // 최대 거리
-        
-        for (i in 1..5) {
-            // 랜덤한 각도(0~360도) 선택
-            val spawnAngle = random.nextDouble() * 2.0 * Math.PI
-            // 최소~최대 사이의 랜덤한 거리 선택
-            val distance = minDistance + random.nextFloat() * (maxDistance - minDistance)
-            
-            val enemyX = player.x + (Math.cos(spawnAngle) * distance).toFloat()
-            val enemyY = player.y + (Math.sin(spawnAngle) * distance).toFloat()
-            
-            // 8개 가상 지점(0~7) 중 하나를 랜덤하게 목표로 설정
-            val targetIndex = random.nextInt(8)
-            
-            val enemy = Enemy(gctx, enemyX, enemyY, player, targetIndex)
+        // 캐릭터 주위에 랜덤하게 10마리의 적 생성
+        for (i in 1..10) {
+            val enemy = Enemy.randomSpawn(gctx, player)
             world.add(enemy, Layer.PLAYER)
         }
     }
@@ -74,54 +75,173 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
     fun onKeyDown(keyCode: Int): Boolean = player.handleKeyDown(keyCode)
     fun onKeyUp(keyCode: Int): Boolean = player.handleKeyUp(keyCode)
 
+    override fun update(gctx: GameContext) {
+        super.update(gctx)
+        checkCollisions()
+        updateSprinkleSequence(gctx)
+        checkTouchHold(gctx)
+    }
+
+    private fun checkTouchHold(gctx: GameContext) {
+        if (isTouchHolding) {
+            val holdDuration = System.currentTimeMillis() - touchDownTime
+            if (holdDuration >= 1000) { // 1초 이상 누르고 있으면
+                val pt = gctx.metrics.fromScreen(lastTouchX, lastTouchY)
+                val tx = pt.x
+                val ty = pt.y
+
+                val playerScreenPos = getPlayerScreenPos()
+                val diffX = tx - playerScreenPos.first
+                val diffY = ty - playerScreenPos.second
+                val angleRad = Math.atan2(diffY.toDouble(), diffX.toDouble())
+
+                // MagicSprinkle 발사 시작
+                startSprinkleSequence(angleRad)
+                isTouchHolding = false // 한 번 발사 후 홀딩 해제
+            }
+        }
+    }
+
+    private fun getPlayerScreenPos(): Pair<Float, Float> {
+        val screenWidth = gctx.metrics.width
+        val screenHeight = gctx.metrics.height
+        val mapSize = 200f * 20f
+
+        val halfWinW = screenWidth / 2f
+        val halfWinH = screenHeight / 2f
+        val camMinX = halfWinW
+        val camMaxX = mapSize - halfWinW
+        val camMinY = halfWinH
+        val camMaxY = mapSize - halfWinH
+
+        val playerScreenX = when {
+            mapSize <= screenWidth -> player.x
+            player.x < camMinX -> player.x
+            player.x > camMaxX -> player.x - (mapSize - screenWidth)
+            else -> halfWinW
+        }
+        val playerScreenY = when {
+            mapSize <= screenHeight -> player.y
+            player.y < camMinY -> player.y
+            player.y > camMaxY -> player.y - (mapSize - screenHeight)
+            else -> halfWinH
+        }
+        return Pair(playerScreenX, playerScreenY)
+    }
+
+    private fun checkCollisions() {
+        val objects = world.objectsAt(Layer.PLAYER)
+        val magicArrows = objects.filterIsInstance<MagicArrow>()
+        val magicSprinkles = objects.filterIsInstance<MagicSprinkle>()
+        val enemies = objects.filterIsInstance<Enemy>()
+
+        val deadEnemies = mutableSetOf<Enemy>()
+        val spentSpells = mutableSetOf<kr.ac.tukorea.ge.spgp2026.a2dg.objects.IGameObject>()
+
+        // MagicArrow 와 적 충돌
+        for (spell in magicArrows) {
+            val spellRect = spell.getBoundingRect()
+            for (enemy in enemies) {
+                if (enemy in deadEnemies) continue
+                if (android.graphics.RectF.intersects(spellRect, enemy.getBoundingRect())) {
+                    deadEnemies.add(enemy)
+                    spentSpells.add(spell)
+                    break // 이 화살은 소멸
+                }
+            }
+        }
+
+        // MagicSprinkle 과 적 충돌
+        for (spell in magicSprinkles) {
+            val spellRect = spell.getBoundingRect()
+            for (enemy in enemies) {
+                if (enemy in deadEnemies) continue
+                if (android.graphics.RectF.intersects(spellRect, enemy.getBoundingRect())) {
+                    deadEnemies.add(enemy)
+                    spentSpells.add(spell)
+                    break // 이 스프링클은 소멸
+                }
+            }
+        }
+
+        // 소멸된 객체 처리 및 새 적 생성
+        for (enemy in deadEnemies) {
+            world.remove(enemy, Layer.PLAYER)
+            world.add(Enemy.randomSpawn(gctx, player), Layer.PLAYER)
+        }
+        for (spell in spentSpells) {
+            world.remove(spell, Layer.PLAYER)
+        }
+    }
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (event.action == MotionEvent.ACTION_DOWN) {
-            val tx = event.x
-            val ty = event.y
-
-            // 테스트용 클릭 효과 추가
-            test.addClickEffect(tx, ty)
-
-            val screenWidth = gctx.metrics.width
-            val screenHeight = gctx.metrics.height
-            val mapSize = 200f * 20f
-
-            // 캐릭터가 화면에 그려지는 실제 위치(Screen Position)를 역산
-            val halfWinW = screenWidth / 2f
-            val halfWinH = screenHeight / 2f
-
-            val camMinX = halfWinW
-            val camMaxX = mapSize - halfWinW
-            val camMinY = halfWinH
-            val camMaxY = mapSize - halfWinH
-
-            val playerScreenX = when {
-                mapSize <= screenWidth -> player.x
-                player.x < camMinX -> player.x
-                player.x > camMaxX -> player.x - (mapSize - screenWidth)
-                else -> halfWinW
+        when (event.action) {
+            MotionEvent.ACTION_DOWN -> {
+                touchDownTime = System.currentTimeMillis()
+                isTouchHolding = true
+                lastTouchX = event.x
+                lastTouchY = event.y
+                return true
             }
-
-            val playerScreenY = when {
-                mapSize <= screenHeight -> player.y
-                player.y < camMinY -> player.y
-                player.y > camMaxY -> player.y - (mapSize - screenHeight)
-                else -> halfWinH
+            MotionEvent.ACTION_MOVE -> {
+                lastTouchX = event.x
+                lastTouchY = event.y
             }
+            MotionEvent.ACTION_UP -> {
+                if (isTouchHolding) {
+                    val holdDuration = System.currentTimeMillis() - touchDownTime
+                    if (holdDuration < 1000) {
+                        // 1초 미만 터치 시 MagicArrow 발사
+                        val pt = gctx.metrics.fromScreen(event.x, event.y)
+                        val tx = pt.x
+                        val ty = pt.y
 
-            // 클릭 지점(tx, ty)에서 캐릭터의 화면 위치(playerScreenX, playerScreenY)를 뺀 벡터가 발사 방향
-            val diffX = tx - playerScreenX
-            val diffY = ty - playerScreenY
+                        test.addClickEffect(tx, ty)
 
-            // 이 벡터를 현재 캐릭터의 월드 좌표에 더하면 월드 기준 목표 지점이 됨
-            val targetWorldX = player.x + diffX
-            val targetWorldY = player.y + diffY
+                        val playerScreenPos = getPlayerScreenPos()
+                        val diffX = tx - playerScreenPos.first
+                        val diffY = ty - playerScreenPos.second
 
-            // 캐릭터의 현재 위치에서 마법 발사
-            val spell = Spell(gctx, player.x, player.y, targetWorldX, targetWorldY, player, world)
-            world.add(spell, Layer.PLAYER)
-            return true
+                        val arrow = MagicArrow(gctx, player.x, player.y, player.x + diffX, player.y + diffY, player, world)
+                        world.add(arrow, Layer.PLAYER)
+                    }
+                    isTouchHolding = false
+                }
+                return true
+            }
+            MotionEvent.ACTION_CANCEL -> {
+                isTouchHolding = false
+            }
         }
         return super.onTouchEvent(event)
+    }
+
+    private fun startSprinkleSequence(baseAngle: Double) {
+        sprinkleTimer = 0f
+        sprinkleCount = 0
+        sprinkleBaseAngle = baseAngle
+    }
+
+    private fun updateSprinkleSequence(gctx: GameContext) {
+        if (sprinkleCount >= 5) return // 0.2초마다 5번 = 1초 동안 총 30발
+
+        sprinkleTimer += gctx.frameTime
+        // 0.2초마다 발사
+        if (sprinkleTimer >= 0.2f) {
+            // 한 번에 6발 발사 (위아래 3개씩, 5도 간격, 총 30도 범위)
+            for (i in -3..2) { // -3, -2, -1, 0, 1, 2 (총 6개)
+                val degOffset = (i + 0.5) * 5.0 // 중심 기준 대칭을 위해 0.5 조정
+                val currentAngle = sprinkleBaseAngle + Math.toRadians(degOffset)
+                
+                val dx = Math.cos(currentAngle).toFloat()
+                val dy = Math.sin(currentAngle).toFloat()
+                
+                val sprinkle = MagicSprinkle(gctx, player.x, player.y, dx, dy, player, world)
+                world.add(sprinkle, Layer.PLAYER)
+            }
+            
+            sprinkleCount++
+            sprinkleTimer = 0f
+        }
     }
 }

@@ -3,13 +3,23 @@ package com.example.justdrawit
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import com.example.justdrawit.base.Player
+import com.example.justdrawit.enemy.Enemy
+import com.example.justdrawit.spell.Spell
 import kr.ac.tukorea.ge.spgp2026.a2dg.objects.IGameObject
 import kr.ac.tukorea.ge.spgp2026.a2dg.view.GameContext
 
 class Test(private val gctx: GameContext, private val player: Player) : IGameObject {
-    // 기능 활성화 여부
-    var isEnabled = true
+    // 클릭 효과 활성화 여부
+    var isClickEffectEnabled = true
     
+    // DirectionHud 활성화 여부
+    var isDirectionHudEnabled = true
+    
+    // 히트박스 출력 여부
+    var drawHitboxEnemy = true
+    var drawHitboxSpell = true
+
     // DirectionHud 관련 변수
     private val boxSize = 80f
     private val gap = 15f
@@ -24,7 +34,7 @@ class Test(private val gctx: GameContext, private val player: Player) : IGameObj
 
     // 클릭 효과 관련 클래스
     private class ClickEffect(val x: Float, val y: Float) {
-        var lifeTime = 3.0f
+        var lifeTime = 0.5f
     }
     private val clickEffects = mutableListOf<ClickEffect>()
     private val yellowPaint = Paint().apply {
@@ -32,15 +42,18 @@ class Test(private val gctx: GameContext, private val player: Player) : IGameObj
         alpha = 128 // 반투명 (0~255)
         style = Paint.Style.FILL
     }
+    private val hitboxPaint = Paint().apply {
+        color = Color.RED
+        style = Paint.Style.STROKE
+        strokeWidth = 2f
+    }
 
     fun addClickEffect(x: Float, y: Float) {
-        if (!isEnabled) return
+        if (!isClickEffectEnabled) return
         clickEffects.add(ClickEffect(x, y))
     }
 
     override fun update(gctx: GameContext) {
-        if (!isEnabled) return
-        
         // 클릭 효과 시간 업데이트 및 만료된 항목 제거
         val it = clickEffects.iterator()
         while (it.hasNext()) {
@@ -53,15 +66,43 @@ class Test(private val gctx: GameContext, private val player: Player) : IGameObj
     }
 
     override fun draw(canvas: Canvas) {
-        if (!isEnabled) return
-
         // 1. 클릭 효과 그리기 (노란색 반투명 원)
-        for (effect in clickEffects) {
-            canvas.drawCircle(effect.x, effect.y, 50f, yellowPaint)
+        if (isClickEffectEnabled) {
+            for (effect in clickEffects) {
+                canvas.drawCircle(effect.x, effect.y, 50f, yellowPaint)
+            }
         }
 
-        // 2. DirectionHud 내용 그리기
-        drawDirectionHud(canvas)
+        // 2. 히트박스 그리기
+        drawHitboxes(canvas)
+
+        // 3. DirectionHud 내용 그리기
+        if (isDirectionHudEnabled) {
+            drawDirectionHud(canvas)
+        }
+    }
+
+    private fun drawHitboxes(canvas: Canvas) {
+        val scene = gctx.scene as? MainScene ?: return
+        val world = scene.world
+
+        if (drawHitboxEnemy) {
+            hitboxPaint.color = Color.RED
+            world.objectsAt(MainScene.Layer.PLAYER).forEach { obj ->
+                if (obj is Enemy) {
+                    obj.getScreenRect().let { canvas.drawRect(it, hitboxPaint) }
+                }
+            }
+        }
+
+        if (drawHitboxSpell) {
+            hitboxPaint.color = Color.BLUE
+            world.objectsAt(MainScene.Layer.PLAYER).forEach { obj ->
+                if (obj is Spell) {
+                    obj.getScreenRect()?.let { canvas.drawRect(it, hitboxPaint) }
+                }
+            }
+        }
     }
 
     private fun drawDirectionHud(canvas: Canvas) {

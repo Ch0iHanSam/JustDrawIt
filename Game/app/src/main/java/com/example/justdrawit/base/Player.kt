@@ -1,4 +1,4 @@
-package com.example.justdrawit
+package com.example.justdrawit.base
 
 import android.graphics.Canvas
 import android.graphics.Color
@@ -6,6 +6,7 @@ import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.view.KeyEvent
+import com.example.justdrawit.R
 import kr.ac.tukorea.ge.spgp2026.a2dg.objects.Sprite
 import kr.ac.tukorea.ge.spgp2026.a2dg.view.GameContext
 
