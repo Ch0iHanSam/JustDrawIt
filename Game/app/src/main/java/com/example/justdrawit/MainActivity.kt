@@ -50,14 +50,17 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
         
         for (i in 1..5) {
             // 랜덤한 각도(0~360도) 선택
-            val angle = random.nextDouble() * 2.0 * Math.PI
+            val spawnAngle = random.nextDouble() * 2.0 * Math.PI
             // 최소~최대 사이의 랜덤한 거리 선택
             val distance = minDistance + random.nextFloat() * (maxDistance - minDistance)
             
-            val enemyX = player.x + (Math.cos(angle) * distance).toFloat()
-            val enemyY = player.y + (Math.sin(angle) * distance).toFloat()
+            val enemyX = player.x + (Math.cos(spawnAngle) * distance).toFloat()
+            val enemyY = player.y + (Math.sin(spawnAngle) * distance).toFloat()
             
-            val enemy = Enemy(gctx, enemyX, enemyY, player)
+            // 8개 가상 지점(0~7) 중 하나를 랜덤하게 목표로 설정
+            val targetIndex = random.nextInt(8)
+            
+            val enemy = Enemy(gctx, enemyX, enemyY, player, targetIndex)
             world.add(enemy, Layer.PLAYER)
         }
     }

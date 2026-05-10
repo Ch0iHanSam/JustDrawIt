@@ -8,8 +8,16 @@ import android.graphics.PorterDuffColorFilter
 import kr.ac.tukorea.ge.spgp2026.a2dg.objects.Sprite
 import kr.ac.tukorea.ge.spgp2026.a2dg.view.GameContext
 
-class Enemy(private val gctx: GameContext, startX: Float, startY: Float, private val player: Player) : Sprite(gctx, R.drawable.densis_illustration) {
+class Enemy(
+    private val gctx: GameContext, 
+    startX: Float, 
+    startY: Float, 
+    private val player: Player,
+    private val targetIndex: Int // 0~7 사이의 가상 지점 인덱스
+) : Sprite(gctx, R.drawable.densis_illustration) {
     private var speed = 0f
+    private val targetOffsetDist = 80f // 캐릭터 중심으로부터의 거리 (캐릭터와 겹치도록 축소)
+    
     private val paint = Paint().apply {
         // 검정색을 덧씌워서 임시로 표현
         colorFilter = PorterDuffColorFilter(Color.BLACK, PorterDuff.Mode.SRC_IN)
@@ -27,12 +35,18 @@ class Enemy(private val gctx: GameContext, startX: Float, startY: Float, private
     }
 
     override fun update(gctx: GameContext) {
-        // 플레이어 방향 벡터 계산
-        var dx = player.x - x
-        var dy = player.y - y
+        // 8개 지점 중 선택된 목표 지점 계산
+        // 0: 상, 1: 상우, 2: 우, 3: 하우, 4: 하, 5: 하좌, 6: 좌, 7: 상좌
+        val angle = Math.toRadians(targetIndex * 45.0 - 90.0) // 0도가 위쪽이 되도록 조정
+        val targetWorldX = player.x + (Math.cos(angle) * targetOffsetDist).toFloat()
+        val targetWorldY = player.y + (Math.sin(angle) * targetOffsetDist).toFloat()
+
+        // 목표 지점 방향 벡터 계산
+        var dx = targetWorldX - x
+        var dy = targetWorldY - y
         val dist = kotlin.math.sqrt(dx * dx + dy * dy)
 
-        if (dist > 1f) { // 아주 가까우면 멈춤 (떨림 방지)
+        if (dist > 5f) { // 목표 지점에 거의 도달하면 부드럽게 유지
             dx /= dist
             dy /= dist
             x += dx * speed * gctx.frameTime
