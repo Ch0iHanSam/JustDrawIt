@@ -50,7 +50,7 @@ https://github.com/Ch0iHanSam/JustDrawIt/graphs/commit-activity
 |2주차|0|
 |3주차|0|
 |4주차|0|
-|5주차|?|
+|5주차|15|
 |6주차|-|
 |7주차|-|
 |8주차|-|
