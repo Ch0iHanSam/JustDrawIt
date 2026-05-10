@@ -61,28 +61,44 @@ class Player(gctx: GameContext) : IGameObject {
     private val size = 300f
     private val speed = 800f
 
-    private var dx = 0f
-    private var dy = 0f
+    private var leftPressed = false
+    private var rightPressed = false
+    private var upPressed = false
+    private var downPressed = false
+
+    private var isColorChanging = false
+    private var frameCount = 0
 
     override fun update(gctx: GameContext) {
-        var moveX = dx
-        var moveY = dy
+        var dx = (if (rightPressed) 1f else 0f) - (if (leftPressed) 1f else 0f)
+        var dy = (if (downPressed) 1f else 0f) - (if (upPressed) 1f else 0f)
         
         if (dx != 0f && dy != 0f) {
             val mag = kotlin.math.sqrt(dx * dx + dy * dy)
-            moveX /= mag
-            moveY /= mag
+            dx /= mag
+            dy /= mag
         }
 
-        x += moveX * speed * gctx.frameTime
-        y += moveY * speed * gctx.frameTime
+        x += dx * speed * gctx.frameTime
+        y += dy * speed * gctx.frameTime
 
-        if (moveX != 0f || moveY != 0f) {
+        if (dx != 0f || dy != 0f) {
             Log.d("JDI_Move", "Player Position: (%.2f, %.2f)".format(x, y))
         }
 
         x = x.coerceIn(0f, gctx.metrics.width)
         y = y.coerceIn(0f, gctx.metrics.height)
+
+        if (isColorChanging) {
+            frameCount++
+            if (frameCount >= 3) {
+                val r = (0..255).random()
+                val g = (0..255).random()
+                val b = (0..255).random()
+                drawable.colorFilter = PorterDuffColorFilter(Color.rgb(r, g, b), PorterDuff.Mode.SRC_IN)
+                frameCount = 0
+            }
+        }
     }
 
     override fun draw(canvas: Canvas) {
@@ -96,10 +112,15 @@ class Player(gctx: GameContext) : IGameObject {
 
     fun handleKeyDown(keyCode: Int): Boolean {
         when (keyCode) {
-            KeyEvent.KEYCODE_DPAD_LEFT -> dx = -1f
-            KeyEvent.KEYCODE_DPAD_RIGHT -> dx = 1f
-            KeyEvent.KEYCODE_DPAD_UP -> dy = -1f
-            KeyEvent.KEYCODE_DPAD_DOWN -> dy = 1f
+            KeyEvent.KEYCODE_DPAD_LEFT -> leftPressed = true
+            KeyEvent.KEYCODE_DPAD_RIGHT -> rightPressed = true
+            KeyEvent.KEYCODE_DPAD_UP -> upPressed = true
+            KeyEvent.KEYCODE_DPAD_DOWN -> downPressed = true
+            KeyEvent.KEYCODE_A -> isColorChanging = true
+            KeyEvent.KEYCODE_B -> {
+                isColorChanging = false
+                drawable.colorFilter = PorterDuffColorFilter(Color.parseColor("#FFC0CB"), PorterDuff.Mode.SRC_IN)
+            }
             else -> return false
         }
         return true
@@ -107,10 +128,10 @@ class Player(gctx: GameContext) : IGameObject {
 
     fun handleKeyUp(keyCode: Int): Boolean {
         when (keyCode) {
-            KeyEvent.KEYCODE_DPAD_LEFT -> if (dx < 0) dx = 0f
-            KeyEvent.KEYCODE_DPAD_RIGHT -> if (dx > 0) dx = 0f
-            KeyEvent.KEYCODE_DPAD_UP -> if (dy < 0) dy = 0f
-            KeyEvent.KEYCODE_DPAD_DOWN -> if (dy > 0) dy = 0f
+            KeyEvent.KEYCODE_DPAD_LEFT -> leftPressed = false
+            KeyEvent.KEYCODE_DPAD_RIGHT -> rightPressed = false
+            KeyEvent.KEYCODE_DPAD_UP -> upPressed = false
+            KeyEvent.KEYCODE_DPAD_DOWN -> downPressed = false
             else -> return false
         }
         return true
