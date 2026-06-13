@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
+import android.graphics.PointF
 import android.view.KeyEvent
 import com.example.justdrawit.R
 import kr.ac.tukorea.ge.spgp2026.a2dg.objects.Sprite
@@ -18,6 +19,8 @@ class Player(private val gctx: GameContext) : Sprite(gctx, R.drawable.densis_ill
     private var upPressed = false
     private var downPressed = false
 
+    private var movementEnabled = true
+    private var joystickDirection: PointF? = null
     private var isColorChanging = false
     private var frameCount = 0
     private val paint = Paint() // 기본적으로 필터 없음
@@ -26,6 +29,12 @@ class Player(private val gctx: GameContext) : Sprite(gctx, R.drawable.densis_ill
     fun isRightPressed() = rightPressed
     fun isUpPressed() = upPressed
     fun isDownPressed() = downPressed
+
+    fun isMovementEnabled() = movementEnabled
+
+    fun setJoystickDirection(dir: PointF?) {
+        joystickDirection = dir
+    }
     
     init {
         // 위치 초기화: 전체 맵(20x20 타일, 각 200f)의 중앙
@@ -43,17 +52,31 @@ class Player(private val gctx: GameContext) : Sprite(gctx, R.drawable.densis_ill
     }
 
     override fun update(gctx: GameContext) {
-        var dx = (if (rightPressed) 1f else 0f) - (if (leftPressed) 1f else 0f)
-        var dy = (if (downPressed) 1f else 0f) - (if (upPressed) 1f else 0f)
-        
-        if (dx != 0f && dy != 0f) {
-            val mag = kotlin.math.sqrt(dx * dx + dy * dy)
-            dx /= mag
-            dy /= mag
-        }
+        var dx = 0f
+        var dy = 0f
 
-        x += dx * speed * gctx.frameTime
-        y += dy * speed * gctx.frameTime
+        if (movementEnabled) {
+            val joyDir = joystickDirection
+            if (joyDir != null && (joyDir.x != 0f || joyDir.y != 0f)) {
+                dx = joyDir.x
+                dy = joyDir.y
+            } else {
+                val horizontal = (if (rightPressed) 1f else 0f) - (if (leftPressed) 1f else 0f)
+                val vertical = (if (downPressed) 1f else 0f) - (if (upPressed) 1f else 0f)
+
+                dx = horizontal
+                dy = vertical
+
+                if (dx != 0f && dy != 0f) {
+                    val mag = kotlin.math.sqrt(dx * dx + dy * dy)
+                    dx /= mag
+                    dy /= mag
+                }
+            }
+
+            x += dx * speed * gctx.frameTime
+            y += dy * speed * gctx.frameTime
+        }
 
         // 월드 경계 제한 (20x20 타일, 캐릭터 크기 고려)
         val mapSize = 200f * 20f
@@ -122,19 +145,15 @@ class Player(private val gctx: GameContext) : Sprite(gctx, R.drawable.densis_ill
         when (keyCode) {
             KeyEvent.KEYCODE_A -> {
                 leftPressed = true
-                rightPressed = false
             }
             KeyEvent.KEYCODE_D -> {
                 rightPressed = true
-                leftPressed = false
             }
             KeyEvent.KEYCODE_W -> {
                 upPressed = true
-                downPressed = false
             }
             KeyEvent.KEYCODE_S -> {
                 downPressed = true
-                upPressed = false
             }
             KeyEvent.KEYCODE_C -> {
                 isColorChanging = !isColorChanging
@@ -143,10 +162,7 @@ class Player(private val gctx: GameContext) : Sprite(gctx, R.drawable.densis_ill
                 }
             }
             KeyEvent.KEYCODE_X -> {
-                leftPressed = false
-                rightPressed = false
-                upPressed = false
-                downPressed = false
+                movementEnabled = !movementEnabled
             }
             else -> return false
         }
@@ -154,12 +170,13 @@ class Player(private val gctx: GameContext) : Sprite(gctx, R.drawable.densis_ill
     }
 
     fun handleKeyUp(keyCode: Int): Boolean {
-        return when (keyCode) {
-            KeyEvent.KEYCODE_A,
-            KeyEvent.KEYCODE_D,
-            KeyEvent.KEYCODE_W,
-            KeyEvent.KEYCODE_S -> true
-            else -> false
+        when (keyCode) {
+            KeyEvent.KEYCODE_A -> leftPressed = false
+            KeyEvent.KEYCODE_D -> rightPressed = false
+            KeyEvent.KEYCODE_W -> upPressed = false
+            KeyEvent.KEYCODE_S -> downPressed = false
+            else -> return false
         }
+        return true
     }
 }

@@ -37,13 +37,12 @@ class Minimap(private val gctx: GameContext, private val player: Player) : IGame
 
     override fun draw(canvas: Canvas) {
         val screenWidth = gctx.metrics.width
-        val screenHeight = gctx.metrics.height
 
-        // 미니맵 박스 위치 (오른쪽 하단)
+        // 미니맵 박스 위치 (오른쪽 상단)
         val left = screenWidth - size - padding
-        val top = screenHeight - size - padding
+        val top = padding
         val right = screenWidth - padding
-        val bottom = screenHeight - padding
+        val bottom = padding + size
 
         // 배경 및 테두리 그리기
         canvas.drawRect(left, top, right, bottom, bgPaint)
@@ -65,7 +64,7 @@ class Minimap(private val gctx: GameContext, private val player: Player) : IGame
 
         // 적 표시 (파란 점)
         val scene = gctx.scene as? MainScene ?: return
-        val enemies = scene.world.objectsAt(MainScene.Layer.PLAYER).filterIsInstance<Enemy>()
+        val enemies = scene.world.objectsAt(MainScene.Layer.ENEMY).filterIsInstance<Enemy>()
         for (enemy in enemies) {
             val relEnemyX = enemy.x / totalMapSize
             val relEnemyY = enemy.y / totalMapSize

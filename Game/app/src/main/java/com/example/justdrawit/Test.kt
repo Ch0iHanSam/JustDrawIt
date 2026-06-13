@@ -14,11 +14,11 @@ class Test(private val gctx: GameContext, private val player: Player) : IGameObj
     var isClickEffectEnabled = true
     
     // DirectionHud 활성화 여부
-    var isDirectionHudEnabled = true
+    var isDirectionHudEnabled = false
     
     // 히트박스 출력 여부
-    var drawHitboxEnemy = true
-    var drawHitboxSpell = true
+    var drawHitboxEnemy = false
+    var drawHitboxSpell = false
 
     // DirectionHud 관련 변수
     private val boxSize = 80f
@@ -30,6 +30,10 @@ class Test(private val gctx: GameContext, private val player: Player) : IGameObj
     private val greenPaint = Paint().apply { 
         color = Color.parseColor("#51CF66")
         style = Paint.Style.FILL 
+    }
+    private val grayPaint = Paint().apply {
+        color = Color.GRAY
+        style = Paint.Style.FILL
     }
 
     // 클릭 효과 관련 클래스
@@ -88,7 +92,7 @@ class Test(private val gctx: GameContext, private val player: Player) : IGameObj
 
         if (drawHitboxEnemy) {
             hitboxPaint.color = Color.RED
-            world.objectsAt(MainScene.Layer.PLAYER).forEach { obj ->
+            world.objectsAt(MainScene.Layer.ENEMY).forEach { obj ->
                 if (obj is Enemy) {
                     obj.getScreenRect().let { canvas.drawRect(it, hitboxPaint) }
                 }
@@ -97,7 +101,14 @@ class Test(private val gctx: GameContext, private val player: Player) : IGameObj
 
         if (drawHitboxSpell) {
             hitboxPaint.color = Color.BLUE
-            world.objectsAt(MainScene.Layer.PLAYER).forEach { obj ->
+            // FloorMagic 히트박스
+            world.objectsAt(MainScene.Layer.FLOOR_MAGIC).forEach { obj ->
+                if (obj is Spell) {
+                    obj.getScreenRect()?.let { canvas.drawRect(it, hitboxPaint) }
+                }
+            }
+            // ArrowMagic 히트박스
+            world.objectsAt(MainScene.Layer.ARROW_MAGIC).forEach { obj ->
                 if (obj is Spell) {
                     obj.getScreenRect()?.let { canvas.drawRect(it, hitboxPaint) }
                 }
@@ -122,7 +133,13 @@ class Test(private val gctx: GameContext, private val player: Player) : IGameObj
     }
 
     private fun drawBox(canvas: Canvas, x: Float, y: Float, isActive: Boolean) {
-        val paint = if (isActive) greenPaint else redPaint
+        val paint = if (!player.isMovementEnabled()) {
+            grayPaint
+        } else if (isActive) {
+            greenPaint
+        } else {
+            redPaint
+        }
         canvas.drawRect(
             x - boxSize / 2,
             y - boxSize / 2,

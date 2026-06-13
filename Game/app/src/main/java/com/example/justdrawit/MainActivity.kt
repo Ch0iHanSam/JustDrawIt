@@ -4,7 +4,13 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.gesture.Gesture
+import android.gesture.GesturePoint
+import android.gesture.GestureStroke
 import com.example.justdrawit.base.Background
+import com.example.justdrawit.base.GestureManager
+import com.example.justdrawit.base.Joystick
+import com.example.justdrawit.base.MagicInput
 import com.example.justdrawit.base.Minimap
 import com.example.justdrawit.base.Player
 import com.example.justdrawit.enemy.Enemy
@@ -14,9 +20,10 @@ import kr.ac.tukorea.ge.spgp2026.a2dg.activity.BaseGameActivity
 import kr.ac.tukorea.ge.spgp2026.a2dg.scene.Scene
 import kr.ac.tukorea.ge.spgp2026.a2dg.scene.World
 import kr.ac.tukorea.ge.spgp2026.a2dg.view.GameContext
+import java.util.ArrayList
 
 class MainActivity : BaseGameActivity() {
-    override val drawsDebugInfo = true // FPS 출력을 활성화합니다.
+    override val drawsDebugInfo = false // FPS 출력을 끕니다 (게임 화면을 위해)
     private var mainScene: MainScene? = null
 
     override fun createRootScene(gctx: GameContext): Scene {
@@ -34,36 +41,47 @@ class MainActivity : BaseGameActivity() {
         if (mainScene?.onKeyUp(keyCode) == true) return true
         return super.onKeyUp(keyCode, event)
     }
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (mainScene?.onTouchEvent(event) == true) return true
+        return super.onTouchEvent(event)
+    }
 }
 
 class MainScene(gctx: GameContext) : Scene(gctx) {
-    enum class Layer { BACKGROUND, PLAYER, HUD }
-    override val world = World(Layer.entries.toTypedArray())
+    enum class Layer { BACKGROUND, FLOOR_MAGIC, ENEMY, PLAYER, ARROW_MAGIC, HUD }
+    override val world = World(Layer.values())
     private val player = Player(gctx)
     private val test = Test(gctx, player)
     private val background = Background(gctx, player)
     private val minimap = Minimap(gctx, player)
+    private val joystick = Joystick(gctx)
+    private val gestureManager = GestureManager(gctx.view.context)
+    private val magicInput = MagicInput(gctx, gestureManager) { handleGestureMagic(it) }
 
     private var sprinkleTimer = 0f
     private var sprinkleCount = 30 // 초기에는 발사하지 않음
     private var sprinkleBaseAngle = 0.0
 
-    // 터치 시간 측정용 변수
+    // 터치 시간 및 제스처용 변수
     private var touchDownTime = 0L
     private var isTouchHolding = false
     private var lastTouchX = 0f
     private var lastTouchY = 0f
+    private val currentPoints = ArrayList<GesturePoint>()
 
     init {
         world.add(background, Layer.BACKGROUND)
         world.add(player, Layer.PLAYER)
         world.add(test, Layer.HUD)
         world.add(minimap, Layer.HUD)
+        world.add(joystick, Layer.HUD)
+        world.add(magicInput, Layer.HUD)
 
         // 캐릭터 주위에 랜덤하게 10마리의 적 생성
         for (i in 1..10) {
             val enemy = Enemy.randomSpawn(gctx, player)
-            world.add(enemy, Layer.PLAYER)
+            world.add(enemy, Layer.ENEMY)
         }
     }
 
@@ -76,6 +94,7 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
     fun onKeyUp(keyCode: Int): Boolean = player.handleKeyUp(keyCode)
 
     override fun update(gctx: GameContext) {
+        player.setJoystickDirection(joystick.getDirection())
         super.update(gctx)
         checkCollisions()
         updateSprinkleSequence(gctx)
@@ -102,7 +121,7 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
         }
     }
 
-    private fun getPlayerScreenPos(): Pair<Float, Float> {
+    private fun getPlayerScreenPos(): android.util.Pair<Float, Float> {
         val screenWidth = gctx.metrics.width
         val screenHeight = gctx.metrics.height
         val mapSize = 200f * 20f
@@ -126,17 +145,23 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
             player.y > camMaxY -> player.y - (mapSize - screenHeight)
             else -> halfWinH
         }
-        return Pair(playerScreenX, playerScreenY)
+        return android.util.Pair(playerScreenX, playerScreenY)
     }
 
     private fun checkCollisions() {
-        val objects = world.objectsAt(Layer.PLAYER)
-        val magicArrows = objects.filterIsInstance<MagicArrow>()
-        val magicSprinkles = objects.filterIsInstance<MagicSprinkle>()
+        val objects = world.objectsAt(Layer.ENEMY)
         val enemies = objects.filterIsInstance<Enemy>()
+        
+        val floorMagicObjects = world.objectsAt(Layer.FLOOR_MAGIC)
+        val arrowMagicObjects = world.objectsAt(Layer.ARROW_MAGIC)
+        
+        val allSpells = floorMagicObjects + arrowMagicObjects
+        
+        val magicArrows = allSpells.filterIsInstance<MagicArrow>()
+        val magicSprinkles = allSpells.filterIsInstance<MagicSprinkle>()
 
         val deadEnemies = mutableSetOf<Enemy>()
-        val spentSpells = mutableSetOf<kr.ac.tukorea.ge.spgp2026.a2dg.objects.IGameObject>()
+        val spentSpells = mutableMapOf<kr.ac.tukorea.ge.spgp2026.a2dg.objects.IGameObject, Layer>()
 
         // MagicArrow 와 적 충돌
         for (spell in magicArrows) {
@@ -145,8 +170,8 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
                 if (enemy in deadEnemies) continue
                 if (android.graphics.RectF.intersects(spellRect, enemy.getBoundingRect())) {
                     deadEnemies.add(enemy)
-                    spentSpells.add(spell)
-                    break // 이 화살은 소멸
+                    spentSpells[spell] = Layer.ARROW_MAGIC
+                    break 
                 }
             }
         }
@@ -158,40 +183,61 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
                 if (enemy in deadEnemies) continue
                 if (android.graphics.RectF.intersects(spellRect, enemy.getBoundingRect())) {
                     deadEnemies.add(enemy)
-                    spentSpells.add(spell)
-                    break // 이 스프링클은 소멸
+                    spentSpells[spell] = Layer.ARROW_MAGIC
+                    break 
                 }
             }
         }
 
         // 소멸된 객체 처리 및 새 적 생성
         for (enemy in deadEnemies) {
-            world.remove(enemy, Layer.PLAYER)
-            world.add(Enemy.randomSpawn(gctx, player), Layer.PLAYER)
+            world.remove(enemy, Layer.ENEMY)
+            world.add(Enemy.randomSpawn(gctx, player), Layer.ENEMY)
         }
-        for (spell in spentSpells) {
-            world.remove(spell, Layer.PLAYER)
+        for ((spell, layer) in spentSpells) {
+            world.remove(spell, layer)
         }
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        val joyHandled = joystick.onTouchEvent(event)
+        val magicHandled = magicInput.onTouchEvent(event)
+        if (joyHandled || magicHandled) return true
+
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
                 touchDownTime = System.currentTimeMillis()
                 isTouchHolding = true
                 lastTouchX = event.x
                 lastTouchY = event.y
+                currentPoints.clear()
+                currentPoints.add(GesturePoint(event.x, event.y, touchDownTime))
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
                 lastTouchX = event.x
                 lastTouchY = event.y
+                currentPoints.add(GesturePoint(event.x, event.y, System.currentTimeMillis()))
             }
             MotionEvent.ACTION_UP -> {
                 if (isTouchHolding) {
                     val holdDuration = System.currentTimeMillis() - touchDownTime
+                    
+                    // 제스처 인식 시도
+                    if (currentPoints.size > 10) { // 어느 정도 선이 그려졌을 때만
+                        val gesture = Gesture()
+                        gesture.addStroke(GestureStroke(currentPoints))
+                        val gestureName = gestureManager.recognize(gesture)
+                        
+                        if (gestureName != null) {
+                            handleGestureMagic(gestureName)
+                            isTouchHolding = false
+                            return true
+                        }
+                    }
+
                     if (holdDuration < 1000) {
-                        // 1초 미만 터치 시 MagicArrow 발사
+                        // 1초 미만 터치 시 MagicArrow 발사 (제스처로 인식되지 않은 경우)
                         val pt = gctx.metrics.fromScreen(event.x, event.y)
                         val tx = pt.x
                         val ty = pt.y
@@ -203,7 +249,7 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
                         val diffY = ty - playerScreenPos.second
 
                         val arrow = MagicArrow(gctx, player.x, player.y, player.x + diffX, player.y + diffY, player, world)
-                        world.add(arrow, Layer.PLAYER)
+                        world.add(arrow, Layer.ARROW_MAGIC)
                     }
                     isTouchHolding = false
                 }
@@ -214,6 +260,38 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
             }
         }
         return super.onTouchEvent(event)
+    }
+
+    private fun handleGestureMagic(name: String) {
+        // 제스처 이름에 따른 특수 효과 처리
+        when (name) {
+            "circle", "circleRight", "circleLeft", "circleRightSmall", "circleLeftSmall" -> {
+                // 원을 그리면 캐릭터 위치에서 MagicSprinkle 360도 발사
+                for (i in 0 until 36) {
+                    val angle = Math.toRadians(i * 10.0)
+                    val dx = Math.cos(angle).toFloat()
+                    val dy = Math.sin(angle).toFloat()
+                    val sprinkle = MagicSprinkle(gctx, player.x, player.y, dx, dy, player, world)
+                    world.add(sprinkle, Layer.ARROW_MAGIC)
+                }
+            }
+            "arrowLeft" -> {
+                val arrow = MagicArrow(gctx, player.x, player.y, player.x - 100f, player.y, player, world)
+                world.add(arrow, Layer.ARROW_MAGIC)
+            }
+            "arrowRight" -> {
+                val arrow = MagicArrow(gctx, player.x, player.y, player.x + 100f, player.y, player, world)
+                world.add(arrow, Layer.ARROW_MAGIC)
+            }
+            "arrowUp" -> {
+                val arrow = MagicArrow(gctx, player.x, player.y, player.x, player.y - 100f, player, world)
+                world.add(arrow, Layer.ARROW_MAGIC)
+            }
+            "arrowDown" -> {
+                val arrow = MagicArrow(gctx, player.x, player.y, player.x, player.y + 100f, player, world)
+                world.add(arrow, Layer.ARROW_MAGIC)
+            }
+        }
     }
 
     private fun startSprinkleSequence(baseAngle: Double) {
@@ -237,7 +315,7 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
                 val dy = Math.sin(currentAngle).toFloat()
                 
                 val sprinkle = MagicSprinkle(gctx, player.x, player.y, dx, dy, player, world)
-                world.add(sprinkle, Layer.PLAYER)
+                world.add(sprinkle, Layer.ARROW_MAGIC)
             }
             
             sprinkleCount++

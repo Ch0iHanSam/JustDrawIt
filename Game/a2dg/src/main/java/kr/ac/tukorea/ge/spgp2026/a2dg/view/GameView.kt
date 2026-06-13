@@ -11,6 +11,7 @@ import android.graphics.RectF
 import android.graphics.Typeface
 import android.util.AttributeSet
 import android.view.Choreographer
+import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
 import androidx.core.graphics.withMatrix
@@ -28,6 +29,25 @@ class GameView @JvmOverloads constructor(
     // 프레임 시간, 리소스 접근, 화면 metrics, scene stack 같은 공통 게임 문맥을 한곳에 모아 둔다.
     private val gctx = GameContext(this)
     private var running = true
+
+    // 제스처 감지기 추가
+    private val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
+        override fun onScroll(e1: MotionEvent?, e2: MotionEvent, distanceX: Float, distanceY: Float): Boolean {
+            return gctx.sceneStack.top?.onScroll(e1, e2, distanceX, distanceY) ?: false
+        }
+
+        override fun onLongPress(e: MotionEvent) {
+            gctx.sceneStack.top?.onLongPress(e)
+        }
+
+        override fun onDoubleTap(e: MotionEvent): Boolean {
+            return gctx.sceneStack.top?.onDoubleTap(e) ?: false
+        }
+
+        override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
+            return gctx.sceneStack.top?.onFling(e1, e2, velocityX, velocityY) ?: false
+        }
+    })
 
     // context 가 Activity 이면 바로 반환하고,
     // ContextThemeWrapper 같은 래퍼가 감싸고 있으면 체인을 따라가며 Activity 를 찾는다.
@@ -149,6 +169,10 @@ class GameView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        // 제스처 감지기에 먼저 전달 (onLongPress, onScroll 등 처리)
+        gestureDetector.onTouchEvent(event)
+        
+        // 기존 터치 처리 로직 수행
         val handled = gctx.sceneStack.top?.onTouchEvent(event) ?: false
         return handled || super.onTouchEvent(event)
     }

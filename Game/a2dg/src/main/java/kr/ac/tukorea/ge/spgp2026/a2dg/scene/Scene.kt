@@ -101,4 +101,10 @@ abstract class Scene(
         pop()
         return true
     }
+
+    // --- 제스처 이벤트 추가 ---
+    open fun onScroll(e1: MotionEvent?, e2: MotionEvent, distanceX: Float, distanceY: Float): Boolean = false
+    open fun onLongPress(e: MotionEvent) {}
+    open fun onDoubleTap(e: MotionEvent): Boolean = false
+    open fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean = false
 }

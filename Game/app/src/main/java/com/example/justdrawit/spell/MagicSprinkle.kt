@@ -42,7 +42,7 @@ class MagicSprinkle(
 
         lifeTime -= gctx.frameTime
         if (lifeTime <= 0) {
-            world.remove(this, MainScene.Layer.PLAYER)
+            world.remove(this, MainScene.Layer.ARROW_MAGIC)
         }
     }
 
