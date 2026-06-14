@@ -25,11 +25,14 @@ class Player(private val gctx: GameContext) : Sprite(gctx, R.drawable.densis_ill
     // HP, MP 시스템
     var hp = 100f
     val maxHp = 100f
+    
+    val initialMaxMp = 100f
+    var maxMp = 100f
     var mp = 100f
-    val maxMp = 100f
+    
     private var mpRegenTimer = 0f
     private val mpRegenDelay = 2.0f // 2초 후 회복 시작
-    private val mpRegenRate = 20f // 초당 20 회복
+    private var mpRegenRate = 20f // 초당 회복량
 
     // 성장 및 점수 시스템
     var damage = 1f
@@ -37,6 +40,22 @@ class Player(private val gctx: GameContext) : Sprite(gctx, R.drawable.densis_ill
     var normalKills = 0
     var eliteKills = 0
     var playTimeSeconds = 0f
+
+    fun updateMaxMp() {
+        // 아이템 12개 획득 시 3배(300)가 되도록 증가
+        // 공식: 초기치 + (초기치 * 2 * (현재 획득수 / 12))
+        val bonusRatio = (upgradeCount / 12f).coerceAtMost(1f)
+        val newMax = initialMaxMp + (initialMaxMp * 2f * bonusRatio)
+        
+        // 최대치 증가분만큼 현재 마나도 채워줌
+        if (newMax > maxMp) {
+            mp += (newMax - maxMp)
+        }
+        maxMp = newMax
+        
+        // 회복량도 최대치에 비례하여 증가 (항상 5초면 풀 마나가 되도록 설정)
+        mpRegenRate = maxMp / 5.0f
+    }
 
     private var isColorChanging = false
     private var frameCount = 0
@@ -218,7 +237,8 @@ class Player(private val gctx: GameContext) : Sprite(gctx, R.drawable.densis_ill
     }
 
     fun getBoundingRect(): android.graphics.RectF {
-        val halfW = width / 2f
+        // 몬스터와 동일하게 가로 히트박스를 0.8배로 축소
+        val halfW = (width * 0.8f) / 2f
         val halfH = height / 2f
         return android.graphics.RectF(x - halfW, y - halfH, x + halfW, y + halfH)
     }

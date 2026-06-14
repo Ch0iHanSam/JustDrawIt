@@ -141,7 +141,7 @@ class Enemy(
         val drawX = x - offsetX
         val drawY = y - offsetY
 
-        val halfW = width / 2f
+        val halfW = (width * 0.8f) / 2f
         val halfH = height / 2f
         
         return RectF(
@@ -151,7 +151,7 @@ class Enemy(
     }
 
     fun getBoundingRect(): RectF {
-        val halfW = width / 2f
+        val halfW = (width * 0.8f) / 2f
         val halfH = height / 2f
         return RectF(x - halfW, y - halfH, x + halfW, y + halfH)
     }

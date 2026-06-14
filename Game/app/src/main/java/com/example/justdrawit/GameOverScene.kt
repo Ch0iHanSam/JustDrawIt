@@ -8,7 +8,7 @@ import android.view.MotionEvent
 import kr.ac.tukorea.ge.spgp2026.a2dg.scene.Scene
 import kr.ac.tukorea.ge.spgp2026.a2dg.view.GameContext
 
-class GameOverScene(gctx: GameContext) : Scene(gctx) {
+class GameOverScene(gctx: GameContext, private val score: Int) : Scene(gctx) {
     override val isTransparent = true // 뒷배경(게임 화면)이 보이도록 설정
 
     private val overlayPaint = Paint().apply {
@@ -36,6 +36,13 @@ class GameOverScene(gctx: GameContext) : Scene(gctx) {
         isFakeBoldText = true
     }
 
+    private val scorePaint = Paint().apply {
+        color = Color.BLACK
+        textSize = 80f
+        textAlign = Paint.Align.CENTER
+        isFakeBoldText = true
+    }
+
     private val restartButtonRect = RectF(250f, 1000f, 650f, 1120f)
     private val mainMenuButtonRect = RectF(250f, 1150f, 650f, 1270f)
 
@@ -48,7 +55,11 @@ class GameOverScene(gctx: GameContext) : Scene(gctx) {
         canvas.drawRect(gctx.metrics.borderRect, overlayPaint)
 
         // 2. GameOver 텍스트
-        canvas.drawText("GameOver", gctx.metrics.width / 2, 600f, titlePaint)
+        val cx = gctx.metrics.width / 2
+        canvas.drawText("GameOver", cx, 600f, titlePaint)
+
+        // 2.1 점수 표시
+        canvas.drawText("Score: $score", cx, 750f, scorePaint)
 
         // 3. Restart 버튼
         drawButton(canvas, restartButtonRect, "Restart")

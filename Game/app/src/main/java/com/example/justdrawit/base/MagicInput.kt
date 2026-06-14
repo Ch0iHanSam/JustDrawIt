@@ -78,6 +78,9 @@ class MagicInput(
     private var savingFeedbackTimer = 0f
 
     private val currentPoints = mutableListOf<GesturePoint>()
+    private val lastPoints = mutableListOf<GesturePoint>() // 페이드 아웃용 저장소
+    private var fadeAlpha = 0
+    private val fadeSpeed = 500f // 초당 감소할 알파값 (255면 약 0.5초)
     private var touchId = -1
 
     init {
@@ -110,6 +113,10 @@ class MagicInput(
 
         when (action) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
+                // 새 입력 시작 시 기존 페이드 아웃 중인 선은 즉시 제거
+                fadeAlpha = 0
+                lastPoints.clear()
+
                 // 버튼 클릭 체크 (magicInputMode가 true일 때만 작동)
                 if (test.magicInputMode) {
                     if (recordButtonRect.contains(tx, ty)) {
@@ -148,8 +155,15 @@ class MagicInput(
             MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP, MotionEvent.ACTION_CANCEL -> {
                 if (pointerId == touchId) {
                     recognizeGesture()
+                    
+                    // 그린 선을 페이드용으로 복사
+                    lastPoints.clear()
+                    lastPoints.addAll(currentPoints)
+                    fadeAlpha = 255
+                    
                     touchId = -1
                     isDrawing = false
+                    currentPoints.clear()
                     return true
                 }
             }
@@ -269,6 +283,14 @@ class MagicInput(
                 isSavingFeedback = false
             }
         }
+        
+        // 페이드 아웃 업데이트
+        if (fadeAlpha > 0) {
+            fadeAlpha = (fadeAlpha - fadeSpeed * gctx.frameTime).toInt().coerceAtLeast(0)
+            if (fadeAlpha == 0) {
+                lastPoints.clear()
+            }
+        }
     }
 
     override fun draw(canvas: Canvas) {
@@ -313,21 +335,30 @@ class MagicInput(
 
         // 현재 그리고 있는 선 시각화 (사각형 내부로 제한)
         if (currentPoints.size > 1) {
-            val saveCount = canvas.save()
-            canvas.clipRect(touchRect) // 사각형 영역으로 그리기 제한
-            
-            for (i in 0 until currentPoints.size - 1) {
-                val p1 = currentPoints[i]
-                val p2 = currentPoints[i+1]
-                // 저장된 상대 좌표를 다시 사각형 기준의 절대 좌표로 변환하여 그리기
-                canvas.drawLine(
-                    p1.x + touchRect.left, p1.y + touchRect.top, 
-                    p2.x + touchRect.left, p2.y + touchRect.top, 
-                    strokePaint
-                )
-            }
-            canvas.restoreToCount(saveCount)
+            drawPoints(canvas, currentPoints, 255)
         }
+        
+        // 다 그린 후 점점 투명해지는 선 시각화
+        if (fadeAlpha > 0 && lastPoints.size > 1) {
+            drawPoints(canvas, lastPoints, fadeAlpha)
+        }
+    }
+
+    private fun drawPoints(canvas: Canvas, points: List<GesturePoint>, alpha: Int) {
+        val saveCount = canvas.save()
+        canvas.clipRect(touchRect)
+        
+        strokePaint.alpha = alpha
+        for (i in 0 until points.size - 1) {
+            val p1 = points[i]
+            val p2 = points[i + 1]
+            canvas.drawLine(
+                p1.x + touchRect.left, p1.y + touchRect.top,
+                p2.x + touchRect.left, p2.y + touchRect.top,
+                strokePaint
+            )
+        }
+        canvas.restoreToCount(saveCount)
     }
 
     private fun drawGesturePreview(canvas: Canvas, textBoxRect: RectF) {

@@ -76,6 +76,7 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
     private var eliteSpawnCountInPhase = 0
     private var isElitePresent = false
     private var floorMagicDamageTimer = 0f
+    private var playerCollisionDamageTimer = 0f
 
     // 터치 시간 및 제스처용 변수
     private var touchDownTime = 0L
@@ -95,9 +96,9 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
         world.add(statusHud, Layer.HUD)
         world.add(scoreHud, Layer.HUD)
 
-        // 캐릭터 주위에 랜덤하게 10마리의 적 생성
+        // 캐릭터 주위에 랜덤하게 10마리의 일반 적 생성
         for (i in 1..10) {
-            val enemy = Enemy.randomSpawn(gctx, player, currentPhase)
+            val enemy = Enemy.randomSpawn(gctx, player, currentPhase, forceElite = false)
             world.add(enemy, Layer.ENEMY)
         }
         
@@ -124,7 +125,8 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
 
     override fun update(gctx: GameContext) {
         if (player.hp <= 0) {
-            GameOverScene(gctx).push()
+            val score = (player.normalKills + player.eliteKills * 10 + player.playTimeSeconds.toInt() * 5)
+            GameOverScene(gctx, score).push()
             return
         }
 
@@ -214,11 +216,21 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
         val collectedItems = mutableSetOf<UpgradeItem>()
         val spentBullets = mutableSetOf<EnemyBullet>()
 
-        // 0. 플레이어와 적 충돌 (HP 감소)
+        // 0. 플레이어와 적 충돌 (HP 감소 - 0.2초마다)
+        playerCollisionDamageTimer += gctx.frameTime
+        val applyPlayerDamage = if (playerCollisionDamageTimer >= 0.2f) {
+            playerCollisionDamageTimer = 0f
+            true
+        } else false
+
         val playerRect = player.getBoundingRect()
+        val collisionDamage = 5f + (currentPhase - 1) // 기본 5, 페이즈당 +1
+        
         for (enemy in enemies) {
             if (android.graphics.RectF.intersects(playerRect, enemy.getBoundingRect())) {
-                player.hp -= 1f
+                if (applyPlayerDamage) {
+                    player.hp -= collisionDamage
+                }
             }
         }
         
@@ -235,6 +247,7 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
             if (android.graphics.RectF.intersects(playerRect, item.getBoundingRect())) {
                 player.upgradeCount++
                 player.damage += 1f
+                player.updateMaxMp() // 최대 마나량 업데이트 및 회복
                 collectedItems.add(item)
             }
         }

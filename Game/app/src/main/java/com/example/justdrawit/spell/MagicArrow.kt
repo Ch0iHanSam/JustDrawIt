@@ -1,19 +1,19 @@
 package com.example.justdrawit.spell
 
+import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.PorterDuff
-import android.graphics.PorterDuffColorFilter
-import android.graphics.drawable.Drawable
-import kr.ac.tukorea.ge.spgp2026.a2dg.objects.IGameObject
-import kr.ac.tukorea.ge.spgp2026.a2dg.scene.World
-import kr.ac.tukorea.ge.spgp2026.a2dg.view.GameContext
+import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.RectF
 import com.example.justdrawit.MainScene
 import com.example.justdrawit.R
 import com.example.justdrawit.base.Player
 import com.example.justdrawit.base.Speed
 import com.example.justdrawit.enemy.Enemy
+import kr.ac.tukorea.ge.spgp2026.a2dg.objects.IGameObject
+import kr.ac.tukorea.ge.spgp2026.a2dg.scene.World
+import kr.ac.tukorea.ge.spgp2026.a2dg.view.GameContext
+import kotlin.math.atan2
 import kotlin.math.sqrt
 
 class MagicArrow(
@@ -23,12 +23,12 @@ class MagicArrow(
     private val player: Player,
     private val world: World<MainScene.Layer>
 ) : IGameObject, Spell {
-    private val drawable: Drawable = gctx.res.getDrawable(R.drawable.ic_launcher_foreground).apply {
-        // 하늘색 (Light Blue) 필터 적용
-        colorFilter = PorterDuffColorFilter(Color.parseColor("#87CEEB"), PorterDuff.Mode.SRC_IN)
-    }
-    private var width = 80f
-    private var height = 80f
+    private val bitmap: Bitmap = gctx.res.getBitmap(R.drawable.fireball)
+    private val srcRect = Rect(0, 0, 173, 100)
+    private val paint = Paint().apply { isAntiAlias = true }
+    
+    private var width = 173f
+    private var height = 100f
     private var speed = 0f
     private var dx = 0f
     private var dy = 0f
@@ -36,22 +36,19 @@ class MagicArrow(
 
     // 잔상을 위한 위치 기록
     private val history = mutableListOf<Pair<Float, Float>>()
-    private val maxHistory = 15 // 잔상 개수 5개 * 간격 3 = 15프레임 기록
+    private val maxHistory = 15
     private val trailCount = 5
-    private val trailInterval = 3 // 잔상 간의 프레임 간격 (거리를 늘리기 위함)
+    private val trailInterval = 3 
 
-    // 랜덤 목표 색상 (그라데이션용)
-    private val targetColor = Color.rgb(
-        (0..255).random(),
-        (0..255).random(),
-        (0..255).random()
-    )
-    private val baseColor = Color.parseColor("#87CEEB") // 기본 하늘색
     private var targetEnemy: Enemy? = null
-    private val trackingRange = 1000f // 새로운 타겟을 찾을 최대 거리
+    private val trackingRange = 1000f 
 
     init {
-        speed = Speed.getSpellSpeed(gctx) * 1.5f // 유도탄이므로 속도를 약간 상향
+        // 크기가 너무 크면 약간 축소 (0.6배 정도)
+        width *= 0.6f
+        height *= 0.6f
+        
+        speed = Speed.getSpellSpeed(gctx) * 1.5f 
         findNearestEnemy()
         
         // 초기 발사 방향 설정 (적이 없으면 플레이어 앞쪽)
@@ -127,46 +124,37 @@ class MagicArrow(
         val offsetX = getCameraOffsetX()
         val offsetY = getCameraOffsetY()
 
-        // 1. 잔상 그리기 (그라데이션 + 투명도)
-        val alphas = intArrayOf(204, 153, 102, 77, 51) // 점점 투명해짐 (0.8, 0.6, 0.4, 0.3, 0.2)
+        val angle = Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat() + 180f
+
+        // 1. 잔상 그리기 (점점 투명해짐)
+        val alphas = intArrayOf(180, 140, 100, 60, 30) 
         
         for (i in 0 until trailCount) {
             val historyIdx = (i + 1) * trailInterval
             if (history.size > historyIdx) {
                 val (hx, hy) = history[historyIdx]
-                
-                // 색상 보간 (Linear Interpolation)
-                // i=0(첫 잔상)일 때 baseColor에 가깝고, i=4(마지막 잔상)일 때 targetColor에 가깝게
-                val ratio = (i + 1).toFloat() / trailCount.toFloat()
-                val interpolatedColor = interpolateColor(baseColor, targetColor, ratio)
-                
-                drawAt(canvas, hx - offsetX, hy - offsetY, alphas[i], interpolatedColor)
+                drawAt(canvas, hx - offsetX, hy - offsetY, alphas[i], angle)
             }
         }
 
-        // 2. 본체 그리기 (기본 하늘색, 100% 투명도)
-        drawAt(canvas, x - offsetX, y - offsetY, 255, baseColor)
+        // 2. 본체 그리기 (100% 투명도)
+        drawAt(canvas, x - offsetX, y - offsetY, 255, angle)
     }
 
-    private fun interpolateColor(start: Int, end: Int, ratio: Float): Int {
-        val r = (Color.red(start) + (Color.red(end) - Color.red(start)) * ratio).toInt()
-        val g = (Color.green(start) + (Color.green(end) - Color.green(start)) * ratio).toInt()
-        val b = (Color.blue(start) + (Color.blue(end) - Color.blue(start)) * ratio).toInt()
-        return Color.rgb(r, g, b)
-    }
-
-    private fun drawAt(canvas: Canvas, screenX: Float, screenY: Float, alpha: Int, color: Int) {
+    private fun drawAt(canvas: Canvas, screenX: Float, screenY: Float, alpha: Int, angle: Float) {
         val halfW = width / 2f
         val halfH = height / 2f
-        drawable.alpha = alpha
-        drawable.colorFilter = PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN)
-        drawable.setBounds(
-            (screenX - halfW).toInt(),
-            (screenY - halfH).toInt(),
-            (screenX + halfW).toInt(),
-            (screenY + halfH).toInt()
-        )
-        drawable.draw(canvas)
+        
+        val saveCount = canvas.save()
+        canvas.translate(screenX, screenY)
+        canvas.rotate(angle)
+        
+        paint.alpha = alpha
+        
+        val dstRect = RectF(-halfW, -halfH, halfW, halfH)
+        canvas.drawBitmap(bitmap, srcRect, dstRect, paint)
+        
+        canvas.restoreToCount(saveCount)
     }
 
     private fun getCameraOffsetX(): Float {
