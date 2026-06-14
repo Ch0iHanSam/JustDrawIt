@@ -34,6 +34,11 @@ class MagicArrow(
     private var dy = 0f
     private var lifeTime = 3.0f
 
+    // 애니메이션 관련
+    private var animTimer = 0f
+    private val animFps = 12f
+    private val frameCount = 8
+
     // 잔상을 위한 위치 기록
     private val history = mutableListOf<Pair<Float, Float>>()
     private val maxHistory = 15
@@ -104,6 +109,12 @@ class MagicArrow(
     override fun update(gctx: GameContext) {
         // 매 프레임 타겟 추적
         updateDirection()
+
+        // 애니메이션 프레임 업데이트
+        animTimer += gctx.frameTime
+        val frameIndex = ((animTimer * animFps).toInt() % frameCount)
+        srcRect.left = frameIndex * 173
+        srcRect.right = srcRect.left + 173
 
         // 이전 위치 기록 (잔상용)
         history.add(0, Pair(x, y))

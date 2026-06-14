@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.view.MotionEvent
+import com.example.justdrawit.R
 import kr.ac.tukorea.ge.spgp2026.a2dg.scene.Scene
 import kr.ac.tukorea.ge.spgp2026.a2dg.view.GameContext
 
@@ -39,6 +40,12 @@ class TitleScene(gctx: GameContext) : Scene(gctx) {
     private val gestureButtonRect = RectF(250f, 1300f, 650f, 1420f)
 
     override fun update(gctx: GameContext) {
+    }
+
+    override fun onEnter() {
+        super.onEnter()
+        // 배경음악 시작 (이미 재생 중이면 무시되도록 처리하고 싶지만 일단 실행)
+        gctx.res.sound.playMusic(R.raw.monplaisir)
     }
 
     override fun draw(canvas: Canvas) {

@@ -96,7 +96,6 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
         world.add(statusHud, Layer.HUD)
         world.add(scoreHud, Layer.HUD)
 
-        // 캐릭터 주위에 랜덤하게 10마리의 일반 적 생성
         for (i in 1..10) {
             val enemy = Enemy.randomSpawn(gctx, player, currentPhase, forceElite = false)
             world.add(enemy, Layer.ENEMY)
@@ -282,6 +281,7 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
                     enemy.hp -= player.damage
                     if (enemy.hp <= 0) deadEnemies.add(enemy)
                     spentSpells[spell] = Layer.ARROW_MAGIC
+                    gctx.res.sound.playEffect(R.raw.boom)
                     break 
                 }
             }
@@ -297,6 +297,7 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
                     enemy.hp -= player.damage
                     if (enemy.hp <= 0) deadEnemies.add(enemy)
                     spentSpells[spell] = Layer.ARROW_MAGIC
+                    gctx.res.sound.playEffect(R.raw.boom)
                     break 
                 }
             }
@@ -366,19 +367,7 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
                     }
 
                     if (holdDuration < 1000) {
-                        // 1초 미만 터치 시 MagicArrow 발사 (제스처로 인식되지 않은 경우)
-                        val pt = gctx.metrics.fromScreen(event.x, event.y)
-                        val tx = pt.x
-                        val ty = pt.y
-
-                        test.addClickEffect(tx, ty)
-
-                        val playerScreenPos = getPlayerScreenPos()
-                        val diffX = tx - playerScreenPos.first
-                        val diffY = ty - playerScreenPos.second
-
-                        val arrow = MagicArrow(gctx, player.x, player.y, player, world)
-                        world.add(arrow, Layer.ARROW_MAGIC)
+                        // 화면 터치 공격 기능 제거
                     }
                     isTouchHolding = false
                 }
@@ -399,6 +388,7 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
                 if (!player.consumeMp(30f)) return
                 
                 // 원을 그리면 캐릭터 위치에서 MagicSprinkle 360도 발사
+                gctx.res.sound.playEffect(R.raw.lasergun)
                 for (i in 0 until 36) {
                     val angle = Math.toRadians(i * 10.0)
                     val dx = Math.cos(angle).toFloat()
@@ -423,6 +413,7 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
                     val arrow = MagicArrow(gctx, pos.first, pos.second, player, world)
                     world.add(arrow, Layer.ARROW_MAGIC)
                 }
+                gctx.res.sound.playEffect(R.raw.fireballsfx)
 
                 spellHud.startArrowCooldown()
             }
