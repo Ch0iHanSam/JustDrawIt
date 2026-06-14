@@ -70,7 +70,21 @@ class Minimap(private val gctx: GameContext, private val player: Player) : IGame
             val relEnemyY = enemy.y / totalMapSize
             val enemyDotX = left + (relEnemyX * size)
             val enemyDotY = top + (relEnemyY * size)
-            canvas.drawCircle(enemyDotX, enemyDotY, 5f, enemyPaint)
+            
+            // 엘리트는 보라색, 일반은 파란색
+            enemyPaint.color = if (enemy.isElite) Color.parseColor("#9C27B0") else Color.BLUE
+            canvas.drawCircle(enemyDotX, enemyDotY, if (enemy.isElite) 7f else 5f, enemyPaint)
+        }
+
+        // 아이템 표시 (초록색 점)
+        val items = scene.world.objectsAt(MainScene.Layer.BACKGROUND).filterIsInstance<UpgradeItem>()
+        val itemPaint = Paint().apply { color = Color.GREEN; style = Paint.Style.FILL }
+        for (item in items) {
+            val relItemX = item.x / totalMapSize
+            val relItemY = item.y / totalMapSize
+            val itemDotX = left + (relItemX * size)
+            val itemDotY = top + (relItemY * size)
+            canvas.drawCircle(itemDotX, itemDotY, 6f, itemPaint)
         }
     }
 }

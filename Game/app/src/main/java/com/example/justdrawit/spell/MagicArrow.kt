@@ -48,17 +48,25 @@ class MagicArrow(
     )
     private val baseColor = Color.parseColor("#87CEEB") // 기본 하늘색
     private var targetEnemy: Enemy? = null
+    private val trackingRange = 1000f // 새로운 타겟을 찾을 최대 거리
 
     init {
         speed = Speed.getSpellSpeed(gctx) * 1.5f // 유도탄이므로 속도를 약간 상향
         findNearestEnemy()
+        
+        // 초기 발사 방향 설정 (적이 없으면 플레이어 앞쪽)
+        if (targetEnemy == null) {
+            dx = 0f
+            dy = -1f 
+        }
         updateDirection()
     }
 
     private fun findNearestEnemy() {
         val enemies = world.objectsAt(MainScene.Layer.ENEMY).filterIsInstance<Enemy>()
-        var minDist = Float.MAX_VALUE
+        var minDist = trackingRange
         
+        targetEnemy = null
         for (enemy in enemies) {
             val dist = sqrt(((enemy.x - x) * (enemy.x - x) + (enemy.y - y) * (enemy.y - y)).toDouble()).toFloat()
             if (dist < minDist) {
@@ -69,34 +77,31 @@ class MagicArrow(
     }
 
     private fun updateDirection() {
-        val tx: Float
-        val ty: Float
-        
         val target = targetEnemy
+        
+        // 타겟이 유효한지 확인
         if (target != null) {
-            // 타겟이 살아있는지 확인 (World에 존재하는지)
             val stillAlive = world.objectsAt(MainScene.Layer.ENEMY).contains(target)
             if (stillAlive) {
-                tx = target.x
-                ty = target.y
-            } else {
-                targetEnemy = null
+                val diffX = target.x - x
+                val diffY = target.y - y
+                val dist = sqrt((diffX * diffX + diffY * diffY).toDouble()).toFloat()
+                
+                if (dist > 0) {
+                    // 유도 성능: 현재 방향에서 타겟 방향으로 부드럽게 회전하는 대신 즉시 보정
+                    dx = diffX / dist
+                    dy = diffY / dist
+                }
                 return
+            } else {
+                // 타겟이 죽었으면 새로운 타겟 찾기
+                targetEnemy = null
+                findNearestEnemy()
+                // 새로 찾은 타겟이 있다면 다음 프레임에서 updateDirection이 처리함
             }
-        } else {
-            // 타겟이 없으면 위로 날아감
-            tx = x
-            ty = y - 100f
         }
-
-        val diffX = tx - x
-        val diffY = ty - y
-        val dist = sqrt((diffX * diffX + diffY * diffY).toDouble()).toFloat()
         
-        if (dist > 0) {
-            dx = diffX / dist
-            dy = diffY / dist
-        }
+        // 타겟이 없으면 기존 dx, dy 방향을 유지 (아무것도 안 함)
     }
 
     override fun update(gctx: GameContext) {

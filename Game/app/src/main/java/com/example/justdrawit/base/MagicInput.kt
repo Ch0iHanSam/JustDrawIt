@@ -101,7 +101,10 @@ class MagicInput(
         val actionIndex = event.actionIndex
         val pointerId = event.getPointerId(actionIndex)
 
-        val pt = gctx.metrics.fromScreen(event.getX(actionIndex), event.getY(actionIndex))
+        // 현재 터치된 위치 (가상 좌표)
+        val rawX = event.getX(actionIndex)
+        val rawY = event.getY(actionIndex)
+        val pt = gctx.metrics.fromScreen(rawX, rawY)
         val tx = pt.x
         val ty = pt.y
 
@@ -111,6 +114,7 @@ class MagicInput(
                 if (test.magicInputMode) {
                     if (recordButtonRect.contains(tx, ty)) {
                         isRecordingMode = !isRecordingMode
+                        Log.d("MagicInput", "Recording Mode Toggle: $isRecordingMode")
                         return true
                     }
                     if (saveButtonRect.contains(tx, ty)) {
@@ -119,6 +123,7 @@ class MagicInput(
                     }
                 }
 
+                // 입력창 터치 체크
                 if (touchId == -1 && touchRect.contains(tx, ty)) {
                     touchId = pointerId
                     isDrawing = true
@@ -130,6 +135,7 @@ class MagicInput(
             }
             MotionEvent.ACTION_MOVE -> {
                 if (touchId != -1) {
+                    // 추적 중인 손가락의 인덱스를 찾음
                     val index = event.findPointerIndex(touchId)
                     if (index != -1) {
                         val movePt = gctx.metrics.fromScreen(event.getX(index), event.getY(index))
@@ -144,7 +150,6 @@ class MagicInput(
                     recognizeGesture()
                     touchId = -1
                     isDrawing = false
-                    currentPoints.clear()
                     return true
                 }
             }

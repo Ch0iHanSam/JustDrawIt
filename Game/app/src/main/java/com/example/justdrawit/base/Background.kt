@@ -27,14 +27,15 @@ class Background(private val gctx: GameContext, private val player: Player) : IG
         offsetX = offsetX.coerceIn(0f, (totalMapSize - screenWidth).coerceAtLeast(0f))
         offsetY = offsetY.coerceIn(0f, (totalMapSize - screenHeight).coerceAtLeast(0f))
 
-        // 화면에 보일 타일 범위 계산
-        val startCol = (offsetX / tileSize).toInt().coerceAtLeast(0)
-        val endCol = ((offsetX + screenWidth) / tileSize).toInt().coerceAtMost(mapTileCount - 1)
-        val startRow = (offsetY / tileSize).toInt().coerceAtLeast(0)
-        val endRow = ((offsetY + screenHeight) / tileSize).toInt().coerceAtMost(mapTileCount - 1)
+        // 화면에 보일 타일 범위 계산 (여유분 margin 추가)
+        val margin = 1 
+        val startCol = (offsetX / tileSize).toInt() - margin
+        val endCol = ((offsetX + screenWidth) / tileSize).toInt() + margin
+        val startRow = (offsetY / tileSize).toInt() - margin
+        val endRow = ((offsetY + screenHeight) / tileSize).toInt() + margin
 
-        for (row in startRow..endRow) {
-            for (col in startCol..endCol) {
+        for (row in startRow.coerceIn(0, mapTileCount - 1)..endRow.coerceIn(0, mapTileCount - 1)) {
+            for (col in startCol.coerceIn(0, mapTileCount - 1)..endCol.coerceIn(0, mapTileCount - 1)) {
                 val left = (col * tileSize - offsetX).toInt()
                 val top = (row * tileSize - offsetY).toInt()
                 val right = left + tileSize.toInt()

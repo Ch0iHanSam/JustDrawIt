@@ -54,14 +54,17 @@ class SpellHud(private val gctx: GameContext) : IGameObject {
     }
 
     override fun draw(canvas: Canvas) {
+        // StatusHud 공간 확보를 위해 아래로 이동 (기존 padding 40 -> 180f 정도부터 시작)
+        val startY = 180f
+        
         // 1번 칸: MagicArrow
-        drawSpellBox(canvas, padding, padding, arrowTimer, arrowCooldown, IconType.ARROW)
+        drawSpellBox(canvas, padding, startY, arrowTimer, arrowCooldown, IconType.ARROW)
 
         // 2번 칸: MagicSprinkle
-        drawSpellBox(canvas, padding, padding + boxSize + gap, sprinkleTimer, sprinkleCooldown, IconType.CIRCLE)
+        drawSpellBox(canvas, padding, startY + boxSize + gap, sprinkleTimer, sprinkleCooldown, IconType.CIRCLE)
 
         // 3번 칸: FloorMagic
-        drawSpellBox(canvas, padding, padding + (boxSize + gap) * 2, floorTimer, floorCooldown, IconType.TRIANGLE)
+        drawSpellBox(canvas, padding, startY + (boxSize + gap) * 2, floorTimer, floorCooldown, IconType.TRIANGLE)
     }
 
     private enum class IconType { ARROW, CIRCLE, TRIANGLE }

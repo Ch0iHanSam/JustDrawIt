@@ -13,8 +13,12 @@ import com.example.justdrawit.base.Joystick
 import com.example.justdrawit.base.MagicInput
 import com.example.justdrawit.base.Minimap
 import com.example.justdrawit.base.Player
+import com.example.justdrawit.base.ScoreHud
 import com.example.justdrawit.base.SpellHud
+import com.example.justdrawit.base.StatusHud
+import com.example.justdrawit.base.UpgradeItem
 import com.example.justdrawit.enemy.Enemy
+import com.example.justdrawit.enemy.EnemyBullet
 import com.example.justdrawit.spell.FloorMagic
 import com.example.justdrawit.spell.MagicArrow
 import com.example.justdrawit.spell.MagicSprinkle
@@ -60,10 +64,18 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
     private val gestureManager = GestureManager(gctx.view.context)
     private val magicInput = MagicInput(gctx, gestureManager, test) { handleGestureMagic(it) }
     private val spellHud = SpellHud(gctx)
+    private val statusHud = StatusHud(player)
+    private val scoreHud = ScoreHud(gctx, player) { currentPhase }
 
     private var sprinkleTimer = 0f
     private var sprinkleCount = 30 // 초기에는 발사하지 않음
     private var sprinkleBaseAngle = 0.0
+
+    private var phaseTimer = 0f
+    private var currentPhase = 1
+    private var eliteSpawnCountInPhase = 0
+    private var isElitePresent = false
+    private var floorMagicDamageTimer = 0f
 
     // 터치 시간 및 제스처용 변수
     private var touchDownTime = 0L
@@ -80,11 +92,25 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
         world.add(joystick, Layer.HUD)
         world.add(magicInput, Layer.HUD)
         world.add(spellHud, Layer.HUD)
+        world.add(statusHud, Layer.HUD)
+        world.add(scoreHud, Layer.HUD)
 
         // 캐릭터 주위에 랜덤하게 10마리의 적 생성
         for (i in 1..10) {
-            val enemy = Enemy.randomSpawn(gctx, player)
+            val enemy = Enemy.randomSpawn(gctx, player, currentPhase)
             world.add(enemy, Layer.ENEMY)
+        }
+        
+        spawnUpgradeItems()
+    }
+
+    private fun spawnUpgradeItems() {
+        val random = java.util.Random()
+        val mapSize = 200f * 20f
+        for (i in 1..3) {
+            val itemX = random.nextFloat() * mapSize
+            val itemY = random.nextFloat() * mapSize
+            world.add(UpgradeItem(gctx, itemX, itemY, player), Layer.BACKGROUND)
         }
     }
 
@@ -97,6 +123,27 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
     override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean = player.handleKeyUp(keyCode)
 
     override fun update(gctx: GameContext) {
+        if (player.hp <= 0) {
+            GameOverScene(gctx).push()
+            return
+        }
+
+        phaseTimer += gctx.frameTime
+        if (phaseTimer >= 30f) {
+            phaseTimer = 0f
+            currentPhase++
+            eliteSpawnCountInPhase = 0 // 페이즈 변경 시 카운트 리셋
+            spawnUpgradeItems()
+        }
+
+        // 엘리트 몬스터 스폰 로직 (3페이즈 이상, 페이즈당 2마리 제한, 현재 부재 시)
+        if (currentPhase >= 3 && eliteSpawnCountInPhase < 2 && !isElitePresent) {
+            val elite = Enemy.randomSpawn(gctx, player, currentPhase, forceElite = true)
+            world.add(elite, Layer.ENEMY)
+            eliteSpawnCountInPhase++
+            isElitePresent = true
+        }
+
         player.setJoystickDirection(joystick.getDirection())
         super.update(gctx)
         checkCollisions()
@@ -152,22 +199,62 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
     }
 
     private fun checkCollisions() {
-        val objects = world.objectsAt(Layer.ENEMY)
-        val enemies = objects.filterIsInstance<Enemy>()
+        val enemyObjects = world.objectsAt(Layer.ENEMY)
+        val enemies = enemyObjects.filterIsInstance<Enemy>()
+        val enemyBullets = enemyObjects.filterIsInstance<EnemyBullet>()
+        
+        val backgroundObjects = world.objectsAt(Layer.BACKGROUND)
+        val upgradeItems = backgroundObjects.filterIsInstance<UpgradeItem>()
         
         val floorMagicObjects = world.objectsAt(Layer.FLOOR_MAGIC)
         val arrowMagicObjects = world.objectsAt(Layer.ARROW_MAGIC)
         
         val deadEnemies = mutableSetOf<Enemy>()
         val spentSpells = mutableMapOf<kr.ac.tukorea.ge.spgp2026.a2dg.objects.IGameObject, Layer>()
+        val collectedItems = mutableSetOf<UpgradeItem>()
+        val spentBullets = mutableSetOf<EnemyBullet>()
 
-        // 1. FloorMagic (장판) 충돌 체크
+        // 0. 플레이어와 적 충돌 (HP 감소)
+        val playerRect = player.getBoundingRect()
+        for (enemy in enemies) {
+            if (android.graphics.RectF.intersects(playerRect, enemy.getBoundingRect())) {
+                player.hp -= 1f
+            }
+        }
+        
+        // 0.1 플레이어와 적 총알 충돌
+        for (bullet in enemyBullets) {
+            if (android.graphics.RectF.intersects(playerRect, bullet.getBoundingRect())) {
+                player.hp -= (player.maxHp / 5f) // 1/5 데미지
+                spentBullets.add(bullet)
+            }
+        }
+
+        // 0.2 플레이어와 아이템 충돌
+        for (item in upgradeItems) {
+            if (android.graphics.RectF.intersects(playerRect, item.getBoundingRect())) {
+                player.upgradeCount++
+                player.damage += 1f
+                collectedItems.add(item)
+            }
+        }
+
+        // 1. FloorMagic (장판) 충돌 체크 (0.2초마다 데미지)
+        floorMagicDamageTimer += gctx.frameTime
+        val applyFloorDamage = if (floorMagicDamageTimer >= 0.2f) {
+            floorMagicDamageTimer = 0f
+            true
+        } else false
+
         for (floor in floorMagicObjects.filterIsInstance<FloorMagic>()) {
             val floorRect = floor.getBoundingRect()
             for (enemy in enemies) {
                 if (enemy in deadEnemies) continue
                 if (android.graphics.RectF.intersects(floorRect, enemy.getBoundingRect())) {
-                    deadEnemies.add(enemy)
+                    if (applyFloorDamage) {
+                        enemy.hp -= player.damage * 0.5f // 1/2 데미지
+                        if (enemy.hp <= 0) deadEnemies.add(enemy)
+                    }
                 }
             }
         }
@@ -179,7 +266,8 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
             for (enemy in enemies) {
                 if (enemy in deadEnemies) continue
                 if (android.graphics.RectF.intersects(spellRect, enemy.getBoundingRect())) {
-                    deadEnemies.add(enemy)
+                    enemy.hp -= player.damage
+                    if (enemy.hp <= 0) deadEnemies.add(enemy)
                     spentSpells[spell] = Layer.ARROW_MAGIC
                     break 
                 }
@@ -193,7 +281,8 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
             for (enemy in enemies) {
                 if (enemy in deadEnemies) continue
                 if (android.graphics.RectF.intersects(spellRect, enemy.getBoundingRect())) {
-                    deadEnemies.add(enemy)
+                    enemy.hp -= player.damage
+                    if (enemy.hp <= 0) deadEnemies.add(enemy)
                     spentSpells[spell] = Layer.ARROW_MAGIC
                     break 
                 }
@@ -202,11 +291,27 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
 
         // 소멸된 객체 처리 및 새 적 생성
         for (enemy in deadEnemies) {
+            if (enemy.isElite) {
+                player.eliteKills++
+                isElitePresent = false // 엘리트 처치됨 -> 다음 업데이트에서 스폰 가능
+            } else {
+                player.normalKills++
+            }
             world.remove(enemy, Layer.ENEMY)
-            world.add(Enemy.randomSpawn(gctx, player), Layer.ENEMY)
+            
+            // 일반 몬스터만 즉시 리스폰
+            if (!enemy.isElite) {
+                world.add(Enemy.randomSpawn(gctx, player, currentPhase), Layer.ENEMY)
+            }
         }
         for ((spell, layer) in spentSpells) {
             world.remove(spell, layer)
+        }
+        for (item in collectedItems) {
+            world.remove(item, Layer.BACKGROUND)
+        }
+        for (bullet in spentBullets) {
+            world.remove(bullet, Layer.ENEMY)
         }
     }
 
@@ -278,6 +383,7 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
         when (name) {
             "circle", "circleRight", "circleLeft", "circleRightSmall", "circleLeftSmall" -> {
                 if (!spellHud.canCastSprinkle()) return
+                if (!player.consumeMp(30f)) return
                 
                 // 원을 그리면 캐릭터 위치에서 MagicSprinkle 360도 발사
                 for (i in 0 until 36) {
@@ -291,6 +397,7 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
             }
             "arrowLeft", "arrowRight", "arrowUp", "arrowDown" -> {
                 if (!spellHud.canCastArrow()) return
+                if (!player.consumeMp(10f)) return
                 
                 // 플레이어 중심, 왼쪽, 오른쪽 3개 지점에서 발사
                 val positions = listOf(
@@ -308,6 +415,7 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
             }
             "triangle" -> {
                 if (!spellHud.canCastFloor()) return
+                if (!player.consumeMp(50f)) return
                 
                 val floor = FloorMagic(gctx, player.x, player.y, player, world)
                 world.add(floor, Layer.FLOOR_MAGIC)

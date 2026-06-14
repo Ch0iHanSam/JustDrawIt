@@ -10,6 +10,9 @@ import kr.ac.tukorea.ge.spgp2026.a2dg.objects.IGameObject
 import kr.ac.tukorea.ge.spgp2026.a2dg.view.GameContext
 
 class Test(private val gctx: GameContext, private val player: Player) : IGameObject {
+    companion object {
+        var showGestureTestButton = false
+    }
     // 클릭 효과 활성화 여부
     var isClickEffectEnabled = false
     

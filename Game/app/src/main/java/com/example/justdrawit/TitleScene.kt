@@ -34,8 +34,9 @@ class TitleScene(gctx: GameContext) : Scene(gctx) {
         isFakeBoldText = true
     }
 
-    private val startButtonRect = RectF(250f, 1000f, 650f, 1150f)
-    private val exitButtonRect = RectF(250f, 1200f, 650f, 1350f)
+    private val startButtonRect = RectF(250f, 1000f, 650f, 1120f)
+    private val exitButtonRect = RectF(250f, 1150f, 650f, 1270f)
+    private val gestureButtonRect = RectF(250f, 1300f, 650f, 1420f)
 
     override fun update(gctx: GameContext) {
     }
@@ -52,6 +53,11 @@ class TitleScene(gctx: GameContext) : Scene(gctx) {
 
         // Exit 버튼
         drawButton(canvas, exitButtonRect, "Exit")
+        
+        // Gesture 테스트 버튼 (Test 설정에 따라 표시)
+        if (Test.showGestureTestButton) {
+            drawButton(canvas, gestureButtonRect, "Gesture")
+        }
     }
 
     private fun drawButton(canvas: Canvas, rect: RectF, text: String) {
@@ -75,6 +81,11 @@ class TitleScene(gctx: GameContext) : Scene(gctx) {
                         it.finish()
                     }
                 }
+                return true
+            }
+            if (Test.showGestureTestButton && gestureButtonRect.contains(pt.x, pt.y)) {
+                // 제스처 테스트 씬으로 이동
+                GestureTestScene(gctx).change()
                 return true
             }
         }

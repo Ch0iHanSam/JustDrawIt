@@ -21,6 +21,23 @@ class Player(private val gctx: GameContext) : Sprite(gctx, R.drawable.densis_ill
 
     private var movementEnabled = true
     private var joystickDirection: PointF? = null
+    
+    // HP, MP 시스템
+    var hp = 100f
+    val maxHp = 100f
+    var mp = 100f
+    val maxMp = 100f
+    private var mpRegenTimer = 0f
+    private val mpRegenDelay = 2.0f // 2초 후 회복 시작
+    private val mpRegenRate = 20f // 초당 20 회복
+
+    // 성장 및 점수 시스템
+    var damage = 1f
+    var upgradeCount = 0
+    var normalKills = 0
+    var eliteKills = 0
+    var playTimeSeconds = 0f
+
     private var isColorChanging = false
     private var frameCount = 0
     private val paint = Paint() // 기본적으로 필터 없음
@@ -88,6 +105,17 @@ class Player(private val gctx: GameContext) : Sprite(gctx, R.drawable.densis_ill
         // syncDstRect() 는 이제 실제 그리기에 사용되지 않지만 
         // 충돌 체크 등을 위해 로직 좌표를 업데이트 함.
         syncDstRect()
+
+        playTimeSeconds += gctx.frameTime
+
+        // MP 자동 회복 로직
+        if (mpRegenTimer > 0) {
+            mpRegenTimer -= gctx.frameTime
+        } else {
+            if (mp < maxMp) {
+                mp = (mp + mpRegenRate * gctx.frameTime).coerceAtMost(maxMp)
+            }
+        }
 
         if (isColorChanging) {
             frameCount++
@@ -178,5 +206,20 @@ class Player(private val gctx: GameContext) : Sprite(gctx, R.drawable.densis_ill
             else -> return false
         }
         return true
+    }
+
+    fun consumeMp(amount: Float): Boolean {
+        if (mp >= amount) {
+            mp -= amount
+            mpRegenTimer = mpRegenDelay // 소모 시 타이머 리셋
+            return true
+        }
+        return false
+    }
+
+    fun getBoundingRect(): android.graphics.RectF {
+        val halfW = width / 2f
+        val halfH = height / 2f
+        return android.graphics.RectF(x - halfW, y - halfH, x + halfW, y + halfH)
     }
 }

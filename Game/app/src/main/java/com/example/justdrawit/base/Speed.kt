@@ -18,10 +18,17 @@ object Speed {
     }
 
     /**
-     * 적 속도: 캐릭터 속도의 70%
+     * 적 속도: 캐릭터 속도의 70% * 일반몬스터 배율(0.8)
      */
     fun getEnemySpeed(gctx: GameContext): Float {
-        return getPlayerSpeed(gctx) * 0.7f
+        return getPlayerSpeed(gctx) * 0.7f * 0.8f
+    }
+
+    /**
+     * 엘리트 적 속도: 일반 적 속도의 60% (0.6)
+     */
+    fun getEliteEnemySpeed(gctx: GameContext): Float {
+        return getEnemySpeed(gctx) * 0.6f
     }
 
     /**
