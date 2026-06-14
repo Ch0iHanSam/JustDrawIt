@@ -250,7 +250,7 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
                         val diffX = tx - playerScreenPos.first
                         val diffY = ty - playerScreenPos.second
 
-                        val arrow = MagicArrow(gctx, player.x, player.y, player.x + diffX, player.y + diffY, player, world)
+                        val arrow = MagicArrow(gctx, player.x, player.y, player, world)
                         world.add(arrow, Layer.ARROW_MAGIC)
                     }
                     isTouchHolding = false
@@ -280,28 +280,21 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
                 }
                 spellHud.startSprinkleCooldown()
             }
-            "arrowLeft" -> {
+            "arrowLeft", "arrowRight", "arrowUp", "arrowDown" -> {
                 if (!spellHud.canCastArrow()) return
-                val arrow = MagicArrow(gctx, player.x, player.y, player.x - 100f, player.y, player, world)
-                world.add(arrow, Layer.ARROW_MAGIC)
-                spellHud.startArrowCooldown()
-            }
-            "arrowRight" -> {
-                if (!spellHud.canCastArrow()) return
-                val arrow = MagicArrow(gctx, player.x, player.y, player.x + 100f, player.y, player, world)
-                world.add(arrow, Layer.ARROW_MAGIC)
-                spellHud.startArrowCooldown()
-            }
-            "arrowUp" -> {
-                if (!spellHud.canCastArrow()) return
-                val arrow = MagicArrow(gctx, player.x, player.y, player.x, player.y - 100f, player, world)
-                world.add(arrow, Layer.ARROW_MAGIC)
-                spellHud.startArrowCooldown()
-            }
-            "arrowDown" -> {
-                if (!spellHud.canCastArrow()) return
-                val arrow = MagicArrow(gctx, player.x, player.y, player.x, player.y + 100f, player, world)
-                world.add(arrow, Layer.ARROW_MAGIC)
+                
+                // 플레이어 중심, 왼쪽, 오른쪽 3개 지점에서 발사
+                val positions = listOf(
+                    Pair(player.x, player.y),
+                    Pair(player.x - 50f, player.y),
+                    Pair(player.x + 50f, player.y)
+                )
+                
+                for (pos in positions) {
+                    val arrow = MagicArrow(gctx, pos.first, pos.second, player, world)
+                    world.add(arrow, Layer.ARROW_MAGIC)
+                }
+
                 spellHud.startArrowCooldown()
             }
         }

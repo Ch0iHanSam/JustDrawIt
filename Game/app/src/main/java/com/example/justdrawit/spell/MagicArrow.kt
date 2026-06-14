@@ -13,13 +13,13 @@ import com.example.justdrawit.MainScene
 import com.example.justdrawit.R
 import com.example.justdrawit.base.Player
 import com.example.justdrawit.base.Speed
+import com.example.justdrawit.enemy.Enemy
+import kotlin.math.sqrt
 
 class MagicArrow(
     private val gctx: GameContext,
     var x: Float,
     var y: Float,
-    targetWorldX: Float,
-    targetWorldY: Float,
     private val player: Player,
     private val world: World<MainScene.Layer>
 ) : IGameObject, Spell {
@@ -47,12 +47,52 @@ class MagicArrow(
         (0..255).random()
     )
     private val baseColor = Color.parseColor("#87CEEB") // 기본 하늘색
+    private var targetEnemy: Enemy? = null
 
     init {
-        speed = Speed.getSpellSpeed(gctx)
-        val diffX = targetWorldX - x
-        val diffY = targetWorldY - y
-        val dist = kotlin.math.sqrt(diffX * diffX + diffY * diffY)
+        speed = Speed.getSpellSpeed(gctx) * 1.5f // 유도탄이므로 속도를 약간 상향
+        findNearestEnemy()
+        updateDirection()
+    }
+
+    private fun findNearestEnemy() {
+        val enemies = world.objectsAt(MainScene.Layer.ENEMY).filterIsInstance<Enemy>()
+        var minDist = Float.MAX_VALUE
+        
+        for (enemy in enemies) {
+            val dist = sqrt(((enemy.x - x) * (enemy.x - x) + (enemy.y - y) * (enemy.y - y)).toDouble()).toFloat()
+            if (dist < minDist) {
+                minDist = dist
+                targetEnemy = enemy
+            }
+        }
+    }
+
+    private fun updateDirection() {
+        val tx: Float
+        val ty: Float
+        
+        val target = targetEnemy
+        if (target != null) {
+            // 타겟이 살아있는지 확인 (World에 존재하는지)
+            val stillAlive = world.objectsAt(MainScene.Layer.ENEMY).contains(target)
+            if (stillAlive) {
+                tx = target.x
+                ty = target.y
+            } else {
+                targetEnemy = null
+                return
+            }
+        } else {
+            // 타겟이 없으면 위로 날아감
+            tx = x
+            ty = y - 100f
+        }
+
+        val diffX = tx - x
+        val diffY = ty - y
+        val dist = sqrt((diffX * diffX + diffY * diffY).toDouble()).toFloat()
+        
         if (dist > 0) {
             dx = diffX / dist
             dy = diffY / dist
@@ -60,6 +100,9 @@ class MagicArrow(
     }
 
     override fun update(gctx: GameContext) {
+        // 매 프레임 타겟 추적
+        updateDirection()
+
         // 이전 위치 기록 (잔상용)
         history.add(0, Pair(x, y))
         if (history.size > maxHistory) {
