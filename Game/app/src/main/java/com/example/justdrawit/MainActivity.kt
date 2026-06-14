@@ -15,6 +15,7 @@ import com.example.justdrawit.base.Minimap
 import com.example.justdrawit.base.Player
 import com.example.justdrawit.base.SpellHud
 import com.example.justdrawit.enemy.Enemy
+import com.example.justdrawit.spell.FloorMagic
 import com.example.justdrawit.spell.MagicArrow
 import com.example.justdrawit.spell.MagicSprinkle
 import kr.ac.tukorea.ge.spgp2026.a2dg.activity.BaseGameActivity
@@ -157,15 +158,22 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
         val floorMagicObjects = world.objectsAt(Layer.FLOOR_MAGIC)
         val arrowMagicObjects = world.objectsAt(Layer.ARROW_MAGIC)
         
-        val allSpells = floorMagicObjects + arrowMagicObjects
-        
-        val magicArrows = allSpells.filterIsInstance<MagicArrow>()
-        val magicSprinkles = allSpells.filterIsInstance<MagicSprinkle>()
-
         val deadEnemies = mutableSetOf<Enemy>()
         val spentSpells = mutableMapOf<kr.ac.tukorea.ge.spgp2026.a2dg.objects.IGameObject, Layer>()
 
-        // MagicArrow 와 적 충돌
+        // 1. FloorMagic (장판) 충돌 체크
+        for (floor in floorMagicObjects.filterIsInstance<FloorMagic>()) {
+            val floorRect = floor.getBoundingRect()
+            for (enemy in enemies) {
+                if (enemy in deadEnemies) continue
+                if (android.graphics.RectF.intersects(floorRect, enemy.getBoundingRect())) {
+                    deadEnemies.add(enemy)
+                }
+            }
+        }
+
+        // 2. MagicArrow 와 적 충돌
+        val magicArrows = arrowMagicObjects.filterIsInstance<MagicArrow>()
         for (spell in magicArrows) {
             val spellRect = spell.getBoundingRect()
             for (enemy in enemies) {
@@ -178,7 +186,8 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
             }
         }
 
-        // MagicSprinkle 과 적 충돌
+        // 3. MagicSprinkle 과 적 충돌
+        val magicSprinkles = arrowMagicObjects.filterIsInstance<MagicSprinkle>()
         for (spell in magicSprinkles) {
             val spellRect = spell.getBoundingRect()
             for (enemy in enemies) {
@@ -296,6 +305,14 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
                 }
 
                 spellHud.startArrowCooldown()
+            }
+            "triangle" -> {
+                if (!spellHud.canCastFloor()) return
+                
+                val floor = FloorMagic(gctx, player.x, player.y, player, world)
+                world.add(floor, Layer.FLOOR_MAGIC)
+                
+                spellHud.startFloorCooldown()
             }
         }
     }

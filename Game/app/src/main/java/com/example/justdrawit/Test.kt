@@ -11,7 +11,7 @@ import kr.ac.tukorea.ge.spgp2026.a2dg.view.GameContext
 
 class Test(private val gctx: GameContext, private val player: Player) : IGameObject {
     // 클릭 효과 활성화 여부
-    var isClickEffectEnabled = true
+    var isClickEffectEnabled = false
     
     // DirectionHud 활성화 여부
     var isDirectionHudEnabled = false
@@ -22,6 +22,9 @@ class Test(private val gctx: GameContext, private val player: Player) : IGameObj
 
     // 매직 입력 모드 (REC, SAVE 버튼 표시 여부)
     var magicInputMode = false
+
+    // 제스처 결과 박스 표시 여부
+    var gestureCheck = false
 
     // DirectionHud 관련 변수
     private val boxSize = 80f

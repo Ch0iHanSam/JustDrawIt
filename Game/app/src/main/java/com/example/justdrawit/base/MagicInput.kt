@@ -26,7 +26,7 @@ class MagicInput(
     private val onGestureRecognized: (String) -> Unit
 ) : IGameObject {
     // 저장할 제스처 이름 변수 (여기서 수정 가능)
-    private var saveGestureName = "circle"
+    private var saveGestureName = "triangle"
     private var isRecordingMode = false
 
     private val rectSize = 400f
@@ -286,21 +286,24 @@ class MagicInput(
             canvas.drawText("SAVE", saveButtonRect.centerX(), saveButtonRect.centerY() + 15f, textPaint)
         }
 
-        // 상단 텍스트 표시 박스 (베이지색 반투명)
-        canvas.drawRect(textBoxRect, bgPaint)
-        canvas.drawRect(textBoxRect, borderPaint)
+        // 제스처 결과 박스 그리기 (gestureCheck가 true일 때만)
+        if (test.gestureCheck) {
+            // 상단 텍스트 표시 박스 (베이지색 반투명)
+            canvas.drawRect(textBoxRect, bgPaint)
+            canvas.drawRect(textBoxRect, borderPaint)
 
-        // 텍스트 출력
-        if (isSavingFeedback) {
-            canvas.drawText("Saving...", textBoxRect.centerX(), textBoxRect.centerY() + 15f, textPaint)
-        } else if (isDrawing) {
-            canvas.drawText("Drawing...", textBoxRect.centerX(), textBoxRect.centerY() + 15f, textPaint)
-        } else {
-            canvas.drawText(lastResultText, textBoxRect.centerX(), textBoxRect.top + 40f, textPaint)
-            canvas.drawText(lastResultScore, textBoxRect.centerX(), textBoxRect.top + 85f, textPaint)
-            
-            // 저장된 제스처 샘플 미리보기 그리기 (텍스트 박스 안쪽 오른쪽 상단에 작게)
-            drawGesturePreview(canvas, textBoxRect)
+            // 텍스트 출력
+            if (isSavingFeedback) {
+                canvas.drawText("Saving...", textBoxRect.centerX(), textBoxRect.centerY() + 15f, textPaint)
+            } else if (isDrawing) {
+                canvas.drawText("Drawing...", textBoxRect.centerX(), textBoxRect.centerY() + 15f, textPaint)
+            } else {
+                canvas.drawText(lastResultText, textBoxRect.centerX(), textBoxRect.top + 40f, textPaint)
+                canvas.drawText(lastResultScore, textBoxRect.centerX(), textBoxRect.top + 85f, textPaint)
+                
+                // 저장된 제스처 샘플 미리보기 그리기 (텍스트 박스 안쪽 오른쪽 상단에 작게)
+                drawGesturePreview(canvas, textBoxRect)
+            }
         }
 
         // 현재 그리고 있는 선 시각화 (사각형 내부로 제한)

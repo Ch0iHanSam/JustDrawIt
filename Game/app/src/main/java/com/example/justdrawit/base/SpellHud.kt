@@ -16,10 +16,12 @@ class SpellHud(private val gctx: GameContext) : IGameObject {
     // 쿨타임 정보 (초 단위)
     var arrowCooldown = 0.5f
     var sprinkleCooldown = 1.0f
+    var floorCooldown = 2.0f
 
     // 현재 남은 쿨타임
     var arrowTimer = 0f
     var sprinkleTimer = 0f
+    var floorTimer = 0f
 
     private val bgPaint = Paint().apply {
         color = Color.BLACK
@@ -48,6 +50,7 @@ class SpellHud(private val gctx: GameContext) : IGameObject {
     override fun update(gctx: GameContext) {
         if (arrowTimer > 0) arrowTimer -= gctx.frameTime
         if (sprinkleTimer > 0) sprinkleTimer -= gctx.frameTime
+        if (floorTimer > 0) floorTimer -= gctx.frameTime
     }
 
     override fun draw(canvas: Canvas) {
@@ -56,9 +59,12 @@ class SpellHud(private val gctx: GameContext) : IGameObject {
 
         // 2번 칸: MagicSprinkle
         drawSpellBox(canvas, padding, padding + boxSize + gap, sprinkleTimer, sprinkleCooldown, IconType.CIRCLE)
+
+        // 3번 칸: FloorMagic
+        drawSpellBox(canvas, padding, padding + (boxSize + gap) * 2, floorTimer, floorCooldown, IconType.TRIANGLE)
     }
 
-    private enum class IconType { ARROW, CIRCLE }
+    private enum class IconType { ARROW, CIRCLE, TRIANGLE }
 
     private fun drawSpellBox(canvas: Canvas, x: Float, y: Float, current: Float, max: Float, type: IconType) {
         val rect = RectF(x, y, x + boxSize, y + boxSize)
@@ -73,6 +79,7 @@ class SpellHud(private val gctx: GameContext) : IGameObject {
         when (type) {
             IconType.ARROW -> drawArrowIcon(canvas, iconRect)
             IconType.CIRCLE -> canvas.drawCircle(iconRect.centerX(), iconRect.centerY(), iconRect.width() / 2f, iconPaint)
+            IconType.TRIANGLE -> drawTriangleIcon(canvas, iconRect)
         }
 
         // 쿨타임 오버레이 (아래에서 위로 차오름)
@@ -89,19 +96,27 @@ class SpellHud(private val gctx: GameContext) : IGameObject {
 
     private fun drawArrowIcon(canvas: Canvas, rect: RectF) {
         val path = Path()
-        // 화살표 모양 (∧)
+        // 꺽쇠 모양 (>)
+        path.moveTo(rect.left + 10f, rect.top)
+        path.lineTo(rect.right - 10f, rect.centerY())
+        path.lineTo(rect.left + 10f, rect.bottom)
+        canvas.drawPath(path, iconPaint)
+    }
+
+    private fun drawTriangleIcon(canvas: Canvas, rect: RectF) {
+        val path = Path()
         path.moveTo(rect.centerX(), rect.top)
-        path.lineTo(rect.left, rect.centerY())
-        path.moveTo(rect.centerX(), rect.top)
-        path.lineTo(rect.right, rect.centerY())
-        path.moveTo(rect.centerX(), rect.top)
-        path.lineTo(rect.centerX(), rect.bottom)
+        path.lineTo(rect.left, rect.bottom)
+        path.lineTo(rect.right, rect.bottom)
+        path.close()
         canvas.drawPath(path, iconPaint)
     }
     
     fun canCastArrow(): Boolean = arrowTimer <= 0f
     fun canCastSprinkle(): Boolean = sprinkleTimer <= 0f
+    fun canCastFloor(): Boolean = floorTimer <= 0f
     
     fun startArrowCooldown() { arrowTimer = arrowCooldown }
     fun startSprinkleCooldown() { sprinkleTimer = sprinkleCooldown }
+    fun startFloorCooldown() { floorTimer = floorCooldown }
 }
