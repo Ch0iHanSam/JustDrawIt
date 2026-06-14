@@ -13,6 +13,7 @@ import com.example.justdrawit.base.Joystick
 import com.example.justdrawit.base.MagicInput
 import com.example.justdrawit.base.Minimap
 import com.example.justdrawit.base.Player
+import com.example.justdrawit.base.SpellHud
 import com.example.justdrawit.enemy.Enemy
 import com.example.justdrawit.spell.MagicArrow
 import com.example.justdrawit.spell.MagicSprinkle
@@ -24,26 +25,25 @@ import java.util.ArrayList
 
 class MainActivity : BaseGameActivity() {
     override val drawsDebugInfo = false // FPS 출력을 끕니다 (게임 화면을 위해)
-    private var mainScene: MainScene? = null
 
     override fun createRootScene(gctx: GameContext): Scene {
-        return MainScene(gctx).also { mainScene = it }
+        return TitleScene(gctx)
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         // 시스템에 의해 반복되는 이벤트는 무시합니다.
         if ((event?.repeatCount ?: 0) > 0) return true
-        if (mainScene?.onKeyDown(keyCode) == true) return true
+        if (gameView.onKeyDown(keyCode, event)) return true
         return super.onKeyDown(keyCode, event)
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
-        if (mainScene?.onKeyUp(keyCode) == true) return true
+        if (gameView.onKeyUp(keyCode, event)) return true
         return super.onKeyUp(keyCode, event)
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (mainScene?.onTouchEvent(event) == true) return true
+        if (gameView.onTouchEvent(event)) return true
         return super.onTouchEvent(event)
     }
 }
@@ -57,7 +57,8 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
     private val minimap = Minimap(gctx, player)
     private val joystick = Joystick(gctx)
     private val gestureManager = GestureManager(gctx.view.context)
-    private val magicInput = MagicInput(gctx, gestureManager) { handleGestureMagic(it) }
+    private val magicInput = MagicInput(gctx, gestureManager, test) { handleGestureMagic(it) }
+    private val spellHud = SpellHud(gctx)
 
     private var sprinkleTimer = 0f
     private var sprinkleCount = 30 // 초기에는 발사하지 않음
@@ -77,6 +78,7 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
         world.add(minimap, Layer.HUD)
         world.add(joystick, Layer.HUD)
         world.add(magicInput, Layer.HUD)
+        world.add(spellHud, Layer.HUD)
 
         // 캐릭터 주위에 랜덤하게 10마리의 적 생성
         for (i in 1..10) {
@@ -90,8 +92,8 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
         super.draw(canvas)
     }
 
-    fun onKeyDown(keyCode: Int): Boolean = player.handleKeyDown(keyCode)
-    fun onKeyUp(keyCode: Int): Boolean = player.handleKeyUp(keyCode)
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean = player.handleKeyDown(keyCode)
+    override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean = player.handleKeyUp(keyCode)
 
     override fun update(gctx: GameContext) {
         player.setJoystickDirection(joystick.getDirection())
@@ -266,6 +268,8 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
         // 제스처 이름에 따른 특수 효과 처리
         when (name) {
             "circle", "circleRight", "circleLeft", "circleRightSmall", "circleLeftSmall" -> {
+                if (!spellHud.canCastSprinkle()) return
+                
                 // 원을 그리면 캐릭터 위치에서 MagicSprinkle 360도 발사
                 for (i in 0 until 36) {
                     val angle = Math.toRadians(i * 10.0)
@@ -274,22 +278,31 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
                     val sprinkle = MagicSprinkle(gctx, player.x, player.y, dx, dy, player, world)
                     world.add(sprinkle, Layer.ARROW_MAGIC)
                 }
+                spellHud.startSprinkleCooldown()
             }
             "arrowLeft" -> {
+                if (!spellHud.canCastArrow()) return
                 val arrow = MagicArrow(gctx, player.x, player.y, player.x - 100f, player.y, player, world)
                 world.add(arrow, Layer.ARROW_MAGIC)
+                spellHud.startArrowCooldown()
             }
             "arrowRight" -> {
+                if (!spellHud.canCastArrow()) return
                 val arrow = MagicArrow(gctx, player.x, player.y, player.x + 100f, player.y, player, world)
                 world.add(arrow, Layer.ARROW_MAGIC)
+                spellHud.startArrowCooldown()
             }
             "arrowUp" -> {
+                if (!spellHud.canCastArrow()) return
                 val arrow = MagicArrow(gctx, player.x, player.y, player.x, player.y - 100f, player, world)
                 world.add(arrow, Layer.ARROW_MAGIC)
+                spellHud.startArrowCooldown()
             }
             "arrowDown" -> {
+                if (!spellHud.canCastArrow()) return
                 val arrow = MagicArrow(gctx, player.x, player.y, player.x, player.y + 100f, player, world)
                 world.add(arrow, Layer.ARROW_MAGIC)
+                spellHud.startArrowCooldown()
             }
         }
     }

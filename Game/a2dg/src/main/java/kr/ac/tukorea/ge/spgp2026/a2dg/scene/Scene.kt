@@ -107,4 +107,7 @@ abstract class Scene(
     open fun onLongPress(e: MotionEvent) {}
     open fun onDoubleTap(e: MotionEvent): Boolean = false
     open fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean = false
+
+    open fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean = false
+    open fun onKeyUp(keyCode: Int, event: android.view.KeyEvent?): Boolean = false
 }

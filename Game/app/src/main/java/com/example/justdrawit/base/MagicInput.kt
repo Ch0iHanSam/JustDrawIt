@@ -11,6 +11,7 @@ import android.graphics.RectF
 import android.view.MotionEvent
 import android.util.Log
 import android.util.Xml
+import com.example.justdrawit.Test
 import kr.ac.tukorea.ge.spgp2026.a2dg.objects.IGameObject
 import kr.ac.tukorea.ge.spgp2026.a2dg.view.GameContext
 import java.io.ByteArrayOutputStream
@@ -21,10 +22,11 @@ import java.util.Locale
 class MagicInput(
     private val gctx: GameContext,
     private val gestureManager: GestureManager,
+    private val test: Test,
     private val onGestureRecognized: (String) -> Unit
 ) : IGameObject {
     // 저장할 제스처 이름 변수 (여기서 수정 가능)
-    private var saveGestureName = "arrowRight"
+    private var saveGestureName = "circle"
     private var isRecordingMode = false
 
     private val rectSize = 400f
@@ -105,14 +107,16 @@ class MagicInput(
 
         when (action) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
-                // 버튼 클릭 체크 (어느 포인터든 가능하도록 pointerId 0 제약 제거)
-                if (recordButtonRect.contains(tx, ty)) {
-                    isRecordingMode = !isRecordingMode
-                    return true
-                }
-                if (saveButtonRect.contains(tx, ty)) {
-                    saveLibraryToFile()
-                    return true
+                // 버튼 클릭 체크 (magicInputMode가 true일 때만 작동)
+                if (test.magicInputMode) {
+                    if (recordButtonRect.contains(tx, ty)) {
+                        isRecordingMode = !isRecordingMode
+                        return true
+                    }
+                    if (saveButtonRect.contains(tx, ty)) {
+                        saveLibraryToFile()
+                        return true
+                    }
                 }
 
                 if (touchId == -1 && touchRect.contains(tx, ty)) {
@@ -267,17 +271,20 @@ class MagicInput(
         canvas.drawRect(touchRect, bgPaint)
         canvas.drawRect(touchRect, borderPaint)
 
-        // REC 버튼 그리기
-        recordButtonPaint.color = if (isRecordingMode) Color.RED else Color.DKGRAY
-        canvas.drawRect(recordButtonRect, recordButtonPaint)
-        canvas.drawRect(recordButtonRect, borderPaint)
-        val recText = if (isRecordingMode) "REC" else "OFF"
-        canvas.drawText(recText, recordButtonRect.centerX(), recordButtonRect.centerY() + 15f, textPaint)
+        // magicInputMode가 true일 때만 버튼 그리기
+        if (test.magicInputMode) {
+            // REC 버튼 그리기
+            recordButtonPaint.color = if (isRecordingMode) Color.RED else Color.DKGRAY
+            canvas.drawRect(recordButtonRect, recordButtonPaint)
+            canvas.drawRect(recordButtonRect, borderPaint)
+            val recText = if (isRecordingMode) "REC" else "OFF"
+            canvas.drawText(recText, recordButtonRect.centerX(), recordButtonRect.centerY() + 15f, textPaint)
 
-        // SAVE 버튼 그리기
-        canvas.drawRect(saveButtonRect, saveButtonPaint)
-        canvas.drawRect(saveButtonRect, borderPaint)
-        canvas.drawText("SAVE", saveButtonRect.centerX(), saveButtonRect.centerY() + 15f, textPaint)
+            // SAVE 버튼 그리기
+            canvas.drawRect(saveButtonRect, saveButtonPaint)
+            canvas.drawRect(saveButtonRect, borderPaint)
+            canvas.drawText("SAVE", saveButtonRect.centerX(), saveButtonRect.centerY() + 15f, textPaint)
+        }
 
         // 상단 텍스트 표시 박스 (베이지색 반투명)
         canvas.drawRect(textBoxRect, bgPaint)

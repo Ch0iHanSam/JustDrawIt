@@ -20,6 +20,9 @@ class Test(private val gctx: GameContext, private val player: Player) : IGameObj
     var drawHitboxEnemy = false
     var drawHitboxSpell = false
 
+    // 매직 입력 모드 (REC, SAVE 버튼 표시 여부)
+    var magicInputMode = false
+
     // DirectionHud 관련 변수
     private val boxSize = 80f
     private val gap = 15f
