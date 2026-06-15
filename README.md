@@ -36,7 +36,7 @@ https://github.com/Ch0iHanSam/JustDrawIt/graphs/commit-activity
 |5주차|17|
 |6주차|0|
 |7주차|0|
-|8주차|8|
+|8주차|12|
 
   
 ## 사용된 기술
