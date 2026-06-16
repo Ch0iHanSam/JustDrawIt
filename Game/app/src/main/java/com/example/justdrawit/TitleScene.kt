@@ -61,10 +61,8 @@ class TitleScene(gctx: GameContext) : Scene(gctx) {
         // Exit 버튼
         drawButton(canvas, exitButtonRect, "Exit")
         
-        // Gesture 테스트 버튼 (Test 설정에 따라 표시)
-        if (Test.showGestureTestButton) {
-            drawButton(canvas, gestureButtonRect, "Gesture")
-        }
+        // Gesture 테스트 버튼 (항상 표시)
+        drawButton(canvas, gestureButtonRect, "Gesture")
     }
 
     private fun drawButton(canvas: Canvas, rect: RectF, text: String) {
@@ -90,7 +88,7 @@ class TitleScene(gctx: GameContext) : Scene(gctx) {
                 }
                 return true
             }
-            if (Test.showGestureTestButton && gestureButtonRect.contains(pt.x, pt.y)) {
+            if (gestureButtonRect.contains(pt.x, pt.y)) {
                 // 제스처 테스트 씬으로 이동
                 GestureTestScene(gctx).change()
                 return true

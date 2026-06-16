@@ -100,7 +100,7 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
             val enemy = Enemy.randomSpawn(gctx, player, currentPhase, forceElite = false)
             world.add(enemy, Layer.ENEMY)
         }
-        
+
         spawnUpgradeItems()
     }
 
@@ -203,13 +203,13 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
         val enemyObjects = world.objectsAt(Layer.ENEMY)
         val enemies = enemyObjects.filterIsInstance<Enemy>()
         val enemyBullets = enemyObjects.filterIsInstance<EnemyBullet>()
-        
+
         val backgroundObjects = world.objectsAt(Layer.BACKGROUND)
         val upgradeItems = backgroundObjects.filterIsInstance<UpgradeItem>()
-        
+
         val floorMagicObjects = world.objectsAt(Layer.FLOOR_MAGIC)
         val arrowMagicObjects = world.objectsAt(Layer.ARROW_MAGIC)
-        
+
         val deadEnemies = mutableSetOf<Enemy>()
         val spentSpells = mutableMapOf<kr.ac.tukorea.ge.spgp2026.a2dg.objects.IGameObject, Layer>()
         val collectedItems = mutableSetOf<UpgradeItem>()
@@ -224,7 +224,7 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
 
         val playerRect = player.getBoundingRect()
         val collisionDamage = 5f + (currentPhase - 1) // 기본 5, 페이즈당 +1
-        
+
         for (enemy in enemies) {
             if (android.graphics.RectF.intersects(playerRect, enemy.getBoundingRect())) {
                 if (applyPlayerDamage) {
@@ -232,7 +232,7 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
                 }
             }
         }
-        
+
         // 0.1 플레이어와 적 총알 충돌
         for (bullet in enemyBullets) {
             if (android.graphics.RectF.intersects(playerRect, bullet.getBoundingRect())) {
@@ -282,7 +282,7 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
                     if (enemy.hp <= 0) deadEnemies.add(enemy)
                     spentSpells[spell] = Layer.ARROW_MAGIC
                     gctx.res.sound.playEffect(R.raw.boom)
-                    break 
+                    break
                 }
             }
         }
@@ -298,7 +298,7 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
                     if (enemy.hp <= 0) deadEnemies.add(enemy)
                     spentSpells[spell] = Layer.ARROW_MAGIC
                     gctx.res.sound.playEffect(R.raw.boom)
-                    break 
+                    break
                 }
             }
         }
@@ -312,7 +312,7 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
                 player.normalKills++
             }
             world.remove(enemy, Layer.ENEMY)
-            
+
             // 일반 몬스터만 즉시 리스폰
             if (!enemy.isElite) {
                 world.add(Enemy.randomSpawn(gctx, player, currentPhase), Layer.ENEMY)
@@ -352,13 +352,13 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
             MotionEvent.ACTION_UP -> {
                 if (isTouchHolding) {
                     val holdDuration = System.currentTimeMillis() - touchDownTime
-                    
+
                     // 제스처 인식 시도
                     if (currentPoints.size > 10) { // 어느 정도 선이 그려졌을 때만
                         val gesture = Gesture()
                         gesture.addStroke(GestureStroke(currentPoints))
                         val gestureName = gestureManager.recognize(gesture)
-                        
+
                         if (gestureName != null) {
                             handleGestureMagic(gestureName)
                             isTouchHolding = false
@@ -386,7 +386,7 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
             "circle", "circleRight", "circleLeft", "circleRightSmall", "circleLeftSmall" -> {
                 if (!spellHud.canCastSprinkle()) return
                 if (!player.consumeMp(30f)) return
-                
+
                 // 원을 그리면 캐릭터 위치에서 MagicSprinkle 360도 발사
                 gctx.res.sound.playEffect(R.raw.lasergun)
                 for (i in 0 until 36) {
@@ -401,14 +401,14 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
             "arrowLeft", "arrowRight", "arrowUp", "arrowDown" -> {
                 if (!spellHud.canCastArrow()) return
                 if (!player.consumeMp(10f)) return
-                
+
                 // 플레이어 중심, 왼쪽, 오른쪽 3개 지점에서 발사
                 val positions = listOf(
                     Pair(player.x, player.y),
                     Pair(player.x - 50f, player.y),
                     Pair(player.x + 50f, player.y)
                 )
-                
+
                 for (pos in positions) {
                     val arrow = MagicArrow(gctx, pos.first, pos.second, player, world)
                     world.add(arrow, Layer.ARROW_MAGIC)
@@ -420,10 +420,10 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
             "triangle" -> {
                 if (!spellHud.canCastFloor()) return
                 if (!player.consumeMp(50f)) return
-                
+
                 val floor = FloorMagic(gctx, player.x, player.y, player, world)
                 world.add(floor, Layer.FLOOR_MAGIC)
-                
+
                 spellHud.startFloorCooldown()
             }
         }
@@ -445,14 +445,14 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
             for (i in -3..2) { // -3, -2, -1, 0, 1, 2 (총 6개)
                 val degOffset = (i + 0.5) * 5.0 // 중심 기준 대칭을 위해 0.5 조정
                 val currentAngle = sprinkleBaseAngle + Math.toRadians(degOffset)
-                
+
                 val dx = Math.cos(currentAngle).toFloat()
                 val dy = Math.sin(currentAngle).toFloat()
-                
+
                 val sprinkle = MagicSprinkle(gctx, player.x, player.y, dx, dy, player, world)
                 world.add(sprinkle, Layer.ARROW_MAGIC)
             }
-            
+
             sprinkleCount++
             sprinkleTimer = 0f
         }
